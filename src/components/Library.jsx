@@ -148,7 +148,39 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
   const [loading, setLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const safeSongs = Array.isArray(songs) ? songs : []
+  // Local metadata storage map for persistent cover & duration
+  const [metaMap, setMetaMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('resonance_song_metadata_cache') || '{}')
+    } catch (_) {
+      return {}
+    }
+  })
+
+  // Format Duration Helper
+  const formatDuration = (sec) => {
+    const s = parseInt(sec, 10) || 0
+    if (!s) return '0:00'
+    const m = Math.floor(s / 60)
+    const rem = s % 60
+    return `${m}:${rem.toString().padStart(2, '0')}`
+  }
+
+  // Merge songs with local metadata
+  const safeSongs = useMemo(() => {
+    const list = Array.isArray(songs) ? songs : []
+    return list.map((s) => {
+      const id = String(s.id)
+      const meta = metaMap[id] || {}
+      return {
+        ...s,
+        coverUrl: s.coverUrl || s.cover_url || s.cover || s.imageUrl || meta.coverUrl || null,
+        durationSeconds: s.durationSeconds || s.duration || s.duration_seconds || meta.durationSeconds || 180,
+        audioUrl: s.audioUrl || s.audio_url || meta.audioUrl || null
+      }
+    })
+  }, [songs, metaMap])
+
   const genres = ['ALL', ...new Set(safeSongs.map((s) => s?.genre).filter(Boolean))]
 
   const genreOptions = genres.map((g) => ({ value: g, label: g }))
@@ -201,14 +233,10 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
         if (sortOrder === 'asc') return (a.title || '').localeCompare(b.title || '')
         if (sortOrder === 'desc') return (b.title || '').localeCompare(a.title || '')
         if (sortOrder === 'duration-asc') {
-          const durA = a.durationSeconds || a.duration || 0
-          const durB = b.durationSeconds || b.duration || 0
-          return durA - durB
+          return (a.durationSeconds || 0) - (b.durationSeconds || 0)
         }
         if (sortOrder === 'duration-desc') {
-          const durA = a.durationSeconds || a.duration || 0
-          const durB = b.durationSeconds || b.duration || 0
-          return durB - durA
+          return (b.durationSeconds || 0) - (a.durationSeconds || 0)
         }
         return 0
       })
@@ -262,22 +290,18 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     const id = songToDelete.id
 
     try {
-      // 1. Save to Local Trash Backup
       const existingTrash = JSON.parse(localStorage.getItem('resonance_trash_stack') || '[]')
       localStorage.setItem('resonance_trash_stack', JSON.stringify([...existingTrash, songToDelete]))
 
-      // 2. Push to Backend Stack (Undo capability)
       try {
         await api.pushStack(songToDelete)
       } catch (err) {
         console.warn('Stack push fallback:', err)
       }
 
-      // 3. Delete from Backend API
       await api.deleteSong(id)
       if (onToast) onToast(`"${songToDelete.title}" moved to Trash (Stack)`, 'ok')
 
-      // 4. Update local queue cache
       setQueuedSongIds((prev) => {
         const next = new Set(prev)
         next.delete(id)
@@ -294,14 +318,14 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     }
   }
 
-  // Add Song State & Handlers
+  // Add Song Form State
   const [formData, setFormData] = useState({
     id: 101,
     title: '',
     artist: '',
     album: '',
     genre: '',
-    durationSeconds: '200',
+    durationSeconds: '210',
     audioUrl: '',
     coverUrl: ''
   })
@@ -314,13 +338,14 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       artist: '',
       album: '',
       genre: '',
-      durationSeconds: '200',
+      durationSeconds: '210',
       audioUrl: '',
       coverUrl: ''
     })
     setShowAddModal(true)
   }
 
+  // Add Song Handler with Local Cache Sync
   const handleAddSong = async (e) => {
     e.preventDefault()
     if (!formData.title.trim() || !formData.artist.trim()) {
@@ -330,15 +355,39 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
 
     setLoading(true)
     try {
+      const songId = parseInt(formData.id, 10) || Date.now() % 100000
+      const durSec = parseInt(formData.durationSeconds, 10) || 180
+      const cUrl = formData.coverUrl.trim() || null
+      const aUrl = formData.audioUrl.trim() || null
+
+      // 1. Save metadata locally to ensure cover & duration persist even if backend drops them
+      const updatedMeta = {
+        ...metaMap,
+        [String(songId)]: {
+          coverUrl: cUrl,
+          durationSeconds: durSec,
+          audioUrl: aUrl
+        }
+      }
+      localStorage.setItem('resonance_song_metadata_cache', JSON.stringify(updatedMeta))
+      setMetaMap(updatedMeta)
+
+      // 2. Send payload with multiple aliases to backend
       const payload = {
-        id: parseInt(formData.id, 10) || Date.now() % 100000,
+        id: songId,
         title: formData.title.trim(),
         artist: formData.artist.trim(),
         album: formData.album.trim() || 'Single',
         genre: formData.genre.trim() || 'General',
-        durationSeconds: parseInt(formData.durationSeconds, 10) || 180,
-        audioUrl: formData.audioUrl.trim() || null,
-        coverUrl: formData.coverUrl.trim() || null
+        duration: durSec,
+        durationSeconds: durSec,
+        duration_seconds: durSec,
+        audioUrl: aUrl,
+        audio_url: aUrl,
+        coverUrl: cUrl,
+        cover_url: cUrl,
+        cover: cUrl,
+        imageUrl: cUrl
       }
 
       await api.insertSong(payload)
@@ -350,14 +399,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     } finally {
       setLoading(false)
     }
-  }
-
-  const formatDuration = (sec) => {
-    const s = parseInt(sec, 10) || 0
-    if (!s) return '0:00'
-    const m = Math.floor(s / 60)
-    const rem = s % 60
-    return `${m}:${rem.toString().padStart(2, '0')}`
   }
 
   return (
@@ -446,7 +487,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
               {displayedSongs.map((song) => {
                 const isCurrent = currentSong?.id === song.id
                 const isQueued = queuedSongIds.has(song.id)
-                const songDuration = song.durationSeconds || song.duration || 0
 
                 return (
                   <tr
@@ -465,7 +505,11 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                           className="play-btn"
                           onClick={(e) => {
                             e.stopPropagation()
-                            play(song)
+                            if (isCurrent && isPlaying) {
+                              play(song)
+                            } else {
+                              play(song, displayedSongs)
+                            }
                           }}
                           title={isCurrent && isPlaying ? 'Pause' : 'Play'}
                         >
@@ -498,7 +542,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                       <span className="genre-pill">{song.genre || 'General'}</span>
                     </td>
                     <td style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--text-dim)' }}>
-                      {formatDuration(songDuration)}
+                      {formatDuration(song.durationSeconds)}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
@@ -545,9 +589,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
         </div>
       </div>
 
-      {/* ========================================================= */}
-      {/* 🟣 GLOWING PURPLE DELETE CONFIRMATION MODAL */}
-      {/* ========================================================= */}
+      {/* Modern Centered Delete Confirmation Modal */}
       {songToDelete && (
         <div
           style={{
@@ -577,7 +619,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
               textAlign: 'center'
             }}
           >
-            {/* Purple Glowing Warning Icon Badge */}
             <div
               style={{
                 width: '56px',
@@ -602,15 +643,13 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
             </h3>
 
             <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: 'var(--text-mid)', lineHeight: 1.5 }}>
-              Are you sure you want to remove{' '}
-              <strong style={{ color: '#fff' }}>"{songToDelete.title}"</strong>?
+              Are you sure you want to remove <strong style={{ color: '#fff' }}>"{songToDelete.title}"</strong>?
               <br />
               <span style={{ fontSize: '12px', color: 'var(--accent-2)' }}>
                 You can undo and restore it anytime from Data Structures.
               </span>
             </p>
 
-            {/* Purple Styled Song Preview Card */}
             <div
               style={{
                 background: 'rgba(168, 85, 247, 0.08)',
@@ -637,7 +676,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <button
                 type="button"
@@ -765,10 +803,11 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                   />
                 </div>
                 <div className="field">
-                  <label>Duration (Sec)</label>
+                  <label>Duration (Seconds)</label>
                   <input
                     type="number"
                     min="1"
+                    placeholder="e.g. 210 (3:30)"
                     value={formData.durationSeconds}
                     onChange={(e) => setFormData({ ...formData, durationSeconds: e.target.value })}
                   />

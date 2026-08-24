@@ -66,7 +66,7 @@ export const api = {
   checkConnection,
   health: () => request('/songs'),
 
-  // Songs
+  // Songs CRUD
   getSongs: () => request('/songs'),
   getSongById: (id) => request(`/songs/${id}`),
   insertSong: (body) => request('/songs', { method: 'POST', body: JSON.stringify(body) }),
@@ -84,7 +84,7 @@ export const api = {
   mergeSort: (order = 'asc') => request(`/sort/merge?order=${order}`),
   quickSort: (order = 'asc') => request(`/sort/quick?order=${order}`),
 
-  // Playback Queue (Enqueue & Dequeue)
+  // Playback Queue
   getQueue: () => request('/queue'),
   enqueue: async (songOrId) => {
     const songId = typeof songOrId === 'object' ? (songOrId.id || songOrId.songId) : songOrId
@@ -93,13 +93,13 @@ export const api = {
     try {
       return await request(`/queue/${intId}`, {
         method: 'POST',
-        body: typeof songOrId === 'object' ? JSON.stringify(songOrId) : null
+        body: typeof songOrId === 'object' ? JSON.stringify(songOrId) : null,
       })
     } catch (err) {
       try {
         return await request('/queue', {
           method: 'POST',
-          body: JSON.stringify(typeof songOrId === 'object' ? songOrId : { id: intId })
+          body: JSON.stringify(typeof songOrId === 'object' ? songOrId : { id: intId }),
         })
       } catch (fallbackErr) {
         return await request(`/queue?id=${intId}`, { method: 'POST' })
@@ -124,7 +124,7 @@ export const api = {
   peekQueue: () => request('/queue/peek'),
   getQueueSize: () => request('/queue/size'),
 
-  // Structures: Stack (Supports Push, Pop, Multi-route fallbacks)
+  // Structures: Stack
   getStackHistory: async () => {
     try {
       return await request('/structures/stack/history')

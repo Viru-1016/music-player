@@ -1,25 +1,64 @@
-function hueFor(seed) {
-  let h = 0
-  const s = String(seed)
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-  return h % 360
-}
+import React, { useState, useEffect } from 'react'
 
-export default function CoverArt({ song, size = 44, playing = false }) {
-  const hue = hueFor((song && (song.id + song.title)) || 'x')
-  const style = {
-    width: size, height: size,
-    background: `linear-gradient(135deg, hsl(${hue} 85% 62%), hsl(${(hue + 55) % 360} 80% 32%))`
+export default function CoverArt({ url, title }) {
+  const [hasError, setHasError] = useState(false)
+
+  // Auto-format path (e.g., 'image/1.jpeg' -> '/image/1.jpeg')
+  const formatCoverUrl = (rawUrl) => {
+    if (!rawUrl || typeof rawUrl !== 'string') return null
+    let clean = rawUrl.trim().replace(/\\/g, '/')
+    if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')) {
+      return clean
+    }
+    // Ensure leading slash for public assets
+    return clean.startsWith('/') ? clean : `/${clean}`
   }
+
+  const finalSrc = formatCoverUrl(url)
+
+  useEffect(() => {
+    setHasError(false)
+  }, [url])
+
+  // If image URL exists and hasn't encountered load error
+  if (finalSrc && !hasError) {
+    return (
+      <img
+        src={finalSrc}
+        alt={title || 'Track Cover'}
+        onError={() => setHasError(true)}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: 'block',
+          borderRadius: 'inherit'
+        }}
+      />
+    )
+  }
+
+  // Fallback Album Art with First Letter & Violet Gradient
+  const initial = title ? title.trim().charAt(0).toUpperCase() : '🎵'
+
   return (
-    <div className={'cover' + (playing ? ' cover-playing' : '')} style={style}>
-      {playing ? (
-        <span className="cover-eq"><i></i><i></i><i></i></span>
-      ) : (
-        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" width={Math.round(size * 0.42)} height={Math.round(size * 0.42)}>
-          <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
-        </svg>
-      )}
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        background: 'linear-gradient(135deg, #a855f7 0%, #6b21a8 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#ffffff',
+        fontWeight: 700,
+        fontSize: initial.length === 1 ? '16px' : '18px',
+        fontFamily: 'var(--inter)',
+        borderRadius: 'inherit',
+        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+      }}
+    >
+      {initial}
     </div>
   )
 }
