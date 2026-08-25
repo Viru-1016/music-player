@@ -852,3 +852,1056 @@ tr.row-playing .song-title-cell { color: var(--accent-2); }
     border-color: #180d2d transparent transparent transparent;
   }
 }
+
+/* ========================================================= */
+/* 🎵 4-COLUMN RESPONSIVE MUSIC CARD GRID */
+/* ========================================================= */
+.song-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Exactly 4 cards per row on desktop */
+  gap: 18px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+/* Individual Card Styling */
+.music-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.music-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 16px rgba(168, 85, 247, 0.25);
+}
+
+.music-card-active {
+  border-color: var(--accent) !important;
+  background: linear-gradient(160deg, rgba(168, 85, 247, 0.12), rgba(124, 58, 237, 0.08)) !important;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.35) !important;
+}
+
+/* Card Cover Image Container */
+.card-cover-container {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-2);
+}
+
+/* Floating Play Button on Image Hover */
+.card-play-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent-dim));
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 14px rgba(168, 85, 247, 0.6);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.22s ease;
+}
+
+.music-card:hover .card-play-btn,
+.card-play-btn-active {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.card-duration-badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 10.5px;
+  font-family: var(--mono);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Card Details */
+.card-body {
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.card-genre-tag {
+  font-size: 10px;
+  background: rgba(168, 85, 247, 0.18);
+  color: var(--accent-2);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 1px 7px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.card-id-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.card-artist {
+  font-size: 12px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 12px;
+}
+
+/* Card Bottom Action Bar */
+.card-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.card-action-btn {
+  flex-grow: 1;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-action-btn:hover {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.card-action-btn.queued {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
+}
+
+.card-delete-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.card-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #f87171;
+}
+
+/* ========================================================= */
+/* 📱 RESPONSIVE BREAKPOINTS */
+/* ========================================================= */
+/* Laptops / Smaller Desktops -> 3 Cards */
+@media (max-width: 1100px) {
+  .song-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+}
+
+/* Tablets -> 2 Cards */
+@media (max-width: 768px) {
+  .song-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+/* Mobile Screens -> 1 Card */
+@media (max-width: 440px) {
+  .song-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================================= */
+/* 🎵 CARD DETAILS & ACTION BAR ENHANCEMENTS */
+/* ========================================================= */
+
+/* Increased Gap between Title & Artist */
+.card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px; /* Increased line gap */
+  margin-top: 4px;
+  margin-bottom: 14px;
+}
+
+.card-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.card-artist {
+  font-size: 12.5px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Card Bottom Action Bar */
+.card-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Main Glowing Play/Pause Button */
+.card-main-play-btn {
+  flex-grow: 1;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent-dim));
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(168, 85, 247, 0.35);
+  outline: none;
+}
+
+.card-main-play-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(192, 132, 252, 0.55);
+}
+
+.card-main-play-btn.playing {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #34d399;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+}
+
+/* Small Queue Icon Button */
+.card-queue-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.card-queue-btn:hover {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.card-queue-btn.queued {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: var(--accent);
+  color: var(--accent-2);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
+}
+
+.queue-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-2);
+}
+
+/* Dustbin Delete Button */
+.card-delete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.card-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #f87171;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+/* ---------- Fix Background Split on Scroll ---------- */
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #0c0714;
+  background-image: radial-gradient(circle at 50% 0%, #200f38 0%, #0d0617 75%, #07030d 100%);
+  background-attachment: fixed; /* Background gradient එක scroll වෙද්දී කඩාගෙන යන්නේ නැත */
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  background: transparent;
+}
+
+.main {
+  flex: 1;
+  padding: 28px 32px 140px; /* Player bar එකට යට නොවෙන්න පහළින් padding එකක් */
+  overflow-y: auto;
+  min-height: 100vh;
+  background: transparent; /* Main wrapper එක transparent කර Global background එක පෙන්වයි */
+}
+
+/* Sidebar background එකත් fixed කර තැබීම */
+.sidebar {
+  background: rgba(13, 7, 23, 0.95);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--border);
+}
+
+/* ========================================================= */
+/* 🎵 SPOTIFY-STYLE MUSIC GRID & CARD STYLES */
+/* ========================================================= */
+
+.spotify-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 20px 16px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* Spotify Card Structure */
+.spotify-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  padding: 12px;
+  transition: background-color 0.25s ease, transform 0.25s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.spotify-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.spotify-card.card-playing {
+  background: rgba(168, 85, 247, 0.12);
+}
+
+/* 1:1 Aspect Ratio Square Artwork Wrapper */
+.spotify-art-wrapper {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: #140b24;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* Floating Glowing Play Circle Button */
+.spotify-hover-play {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 16px rgba(168, 85, 247, 0.5);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 5;
+}
+
+.spotify-card:hover .spotify-hover-play,
+.spotify-hover-play.active {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.spotify-hover-play:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8), 0 0 22px rgba(192, 132, 252, 0.8);
+}
+
+/* Quick Corner Action Icons (Queue / Delete) */
+.spotify-card-overlay-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 6;
+}
+
+.spotify-card:hover .spotify-card-overlay-actions {
+  opacity: 1;
+}
+
+.card-icon-action {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(10, 5, 20, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.card-icon-action:hover {
+  background: var(--accent);
+  border-color: var(--accent-2);
+}
+
+.card-icon-action.delete:hover {
+  background: #ef4444;
+  border-color: #f87171;
+}
+
+/* Track Title & Artist Text Underneath */
+.spotify-card-info {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.spotify-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.spotify-card-artist {
+  font-size: 12px;
+  color: #a1a1aa; /* Crisp muted grey text */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Large Screens -> 6-7 items per row / Tablet -> 4 items / Mobile -> 2 items */
+@media (min-width: 1400px) {
+  .spotify-cards-grid {
+    grid-template-columns: repeat(7, 1fr);
+  }
+}
+
+@media (max-width: 1399px) and (min-width: 1100px) {
+  .spotify-cards-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (max-width: 1099px) and (min-width: 768px) {
+  .spotify-cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 767px) and (min-width: 440px) {
+  .spotify-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 439px) {
+  .spotify-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+/* ========================================================= */
+/* 🚀 SLIDING ANIMATED SIDEBAR & TOGGLE BUTTON */
+/* ========================================================= */
+
+/* Floating Modern Glowing Toggle Button */
+.sidebar-toggle-btn {
+  position: fixed;
+  top: 18px;
+  left: 20px;
+  z-index: 1050;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(23, 13, 43, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--accent);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 14px rgba(168, 85, 247, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.sidebar-toggle-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 22px rgba(168, 85, 247, 0.7);
+  background: rgba(168, 85, 247, 0.25);
+}
+
+/* Move toggle button slightly right when sidebar is open */
+.sidebar-toggle-btn.open {
+  left: 236px;
+}
+
+/* Sidebar Animation Setup */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 80px; /* Player bar height clearance */
+  width: 260px;
+  z-index: 1000;
+  transform: translateX(0);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 4px 0 25px rgba(0, 0, 0, 0.6);
+}
+
+/* Closed State -> Slide fully to the left out of screen */
+.sidebar.sidebar-closed {
+  transform: translateX(-100%) !important;
+  box-shadow: none;
+}
+
+/* Adjust Main Content Margin dynamically based on state */
+.app.sidebar-expanded .main {
+  margin-left: 260px;
+  transition: margin-left 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app.sidebar-collapsed .main {
+  margin-left: 0 !important;
+  padding-left: 70px !important; /* Space for the floating button */
+  transition: margin-left 0.32s cubic-bezier(0.4, 0, 0.2, 1), padding-left 0.32s ease;
+}
+
+/* Backdrop on Mobile */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 990;
+}
+
+@media (max-width: 768px) {
+  .app.sidebar-expanded .main {
+    margin-left: 0;
+  }
+  .sidebar-toggle-btn.open {
+    left: 200px;
+  }
+}
+
+/* ========================================================= */
+/* 🟣 NEON SQUIRCLE HAMBURGER BUTTON (EXACT MATCH) */
+/* ========================================================= */
+
+.sidebar-toggle-btn {
+  position: fixed;
+  top: 18px;
+  left: 20px;
+  z-index: 1050;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #110724;
+  border: 2px solid #a855f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.5), inset 0 0 8px rgba(168, 85, 247, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  padding: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  transform: scale(1.06);
+  border-color: #c084fc;
+  box-shadow: 0 0 22px rgba(192, 132, 252, 0.8), inset 0 0 10px rgba(168, 85, 247, 0.35);
+}
+
+.sidebar-toggle-btn.open {
+  display: none; /* Sidebar එක open වූ විට floating button එක hide වී Header එක ඇතුළේ ඇති icon එක පෙන්වයි */
+}
+
+/* Inside Sidebar Header Button */
+.sidebar-header-toggle-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #15092c;
+  border: 2px solid #a855f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.45);
+  transition: all 0.2s ease;
+  outline: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sidebar-header-toggle-btn:hover {
+  transform: scale(1.05);
+  border-color: #c084fc;
+  box-shadow: 0 0 18px rgba(192, 132, 252, 0.75);
+}
+
+/* 3 Horizontal Solid White Bars */
+.squircle-hamburger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3.5px;
+  width: 18px;
+}
+
+.squircle-hamburger span {
+  display: block;
+  width: 18px;
+  height: 2.8px;
+  background-color: #ffffff;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ========================================================= */
+/* 🚀 DYNAMIC RESPONSIVE LAYOUT (EXPANDED & COLLAPSED) */
+/* ========================================================= */
+
+/* App Shell Setup */
+.app {
+  min-height: 100vh;
+  display: flex;
+  background: transparent;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Sidebar Styling */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 80px; /* Player Bar space */
+  width: 260px;
+  z-index: 1000;
+  transform: translateX(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 4px 0 25px rgba(0, 0, 0, 0.6);
+  background: rgba(13, 7, 23, 0.96);
+  backdrop-filter: blur(14px);
+  border-right: 1px solid var(--border);
+}
+
+.sidebar.sidebar-closed {
+  transform: translateX(-100%) !important;
+  box-shadow: none;
+}
+
+/* Floating Squircle Hamburger Button */
+.sidebar-toggle-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1050;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: #110724;
+  border: 2px solid #a855f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.5), inset 0 0 8px rgba(168, 85, 247, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  padding: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  transform: scale(1.06);
+  border-color: #c084fc;
+  box-shadow: 0 0 22px rgba(192, 132, 252, 0.8);
+}
+
+.sidebar-toggle-btn.open {
+  display: none !important;
+}
+
+/* Main Content Area: Smooth Margin Transitions */
+.main {
+  flex: 1;
+  width: 100%;
+  min-height: 100vh;
+  padding: 22px 36px 120px;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* When Sidebar is OPEN: Push Main right by 260px */
+.app.sidebar-expanded .main {
+  margin-left: 260px;
+}
+
+/* When Sidebar is COLLAPSED (HIDDEN): Align Header with the Toggle Button */
+.app.sidebar-collapsed .main {
+  margin-left: 0 !important;
+  padding-left: 80px !important; /* Leaves neat margin for the left floating hamburger */
+  padding-right: 40px !important;
+}
+
+/* Header & Controls Alignment */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  min-height: 44px;
+}
+
+.h-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.h-title span {
+  color: var(--accent-2);
+}
+
+/* Toolbar Panel Auto-stretch */
+.lib-toolbar-panel {
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ========================================================= */
+/* 🎵 BALANCED SPOTIFY CARDS GRID */
+/* ========================================================= */
+
+.spotify-cards-grid {
+  display: grid;
+  gap: 20px 18px;
+  width: 100%;
+}
+
+/* When Sidebar is OPEN -> 5-6 Balanced Columns */
+.app.sidebar-expanded .spotify-cards-grid {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+/* When Sidebar is HIDDEN -> Auto Scales smoothly to 7-8 Balanced Columns across the entire screen */
+.app.sidebar-collapsed .spotify-cards-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+/* Card Styling */
+.spotify-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 12px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.spotify-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-4px);
+  border-color: rgba(168, 85, 247, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5), 0 0 18px rgba(168, 85, 247, 0.2);
+}
+
+.spotify-card.card-playing {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: var(--accent);
+}
+
+/* Square 1:1 Cover Art Box */
+.spotify-art-wrapper {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 9px;
+  overflow: hidden;
+  position: relative;
+  background: #140b24;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.spotify-hover-play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 16px rgba(168, 85, 247, 0.5);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 5;
+}
+
+.spotify-card:hover .spotify-hover-play,
+.spotify-hover-play.active {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.spotify-hover-play:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 8px 22px rgba(192, 132, 252, 0.9);
+}
+
+/* Card Text */
+.spotify-card-info {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.spotify-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.spotify-card-artist {
+  font-size: 12px;
+  color: #a1a1aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Mobile Screens */
+@media (max-width: 768px) {
+  .app.sidebar-expanded .main,
+  .app.sidebar-collapsed .main {
+    margin-left: 0 !important;
+    padding: 20px 14px 110px !important;
+  }
+  .spotify-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 12px;
+  }
+}
+
+/* ========================================================= */
+/* 🚀 100% FULL SCREEN STRETCH FIX (NO MAX-WIDTH LIMITS) */
+/* ========================================================= */
+
+/* 1. Remove any fixed max-widths restricting the width */
+.app, 
+.main, 
+.panel, 
+.header, 
+.lib-toolbar-panel, 
+.spotify-cards-grid {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 2. Main Wrapper takes full viewport width */
+.main {
+  flex: 1;
+  min-height: 100vh;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 3. When Sidebar is OPEN: Keep neat right padding */
+.app.sidebar-expanded .main {
+  margin-left: 260px !important;
+  padding: 24px 36px 120px 36px !important;
+  width: calc(100% - 260px) !important;
+}
+
+/* 4. When Sidebar is HIDDEN: Stretch all the way from Left (80px icon gap) to Right Edge */
+.app.sidebar-collapsed .main {
+  margin-left: 0 !important;
+  padding: 24px 36px 120px 80px !important; /* Left 80px for icon, Right 36px clean edge */
+  width: 100% !important;
+}
+
+/* 5. Toolbar Panel & Search Row Stretch to full 100% width */
+.lib-toolbar-panel {
+  width: 100% !important;
+}
+
+.lib-toolbar-layout {
+  display: flex !important;
+  width: 100% !important;
+  gap: 16px !important;
+}
+
+.search-box {
+  flex: 1 !important; /* Search bar automatically stretches to fill all available width */
+  width: 100% !important;
+}
+
+/* 6. Spotify Cards Grid stretches across the full width */
+.spotify-cards-grid {
+  display: grid !important;
+  width: 100% !important;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+  gap: 20px 16px !important;
+}

@@ -3,7 +3,6 @@ import { api } from '../api'
 import CoverArt from './CoverArt'
 import { usePlayer } from './PlayerContext'
 
-// Custom Sleek Dropdown Component
 function CustomDropdown({ label, options, value, onChange, placeholder = 'Select' }) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef(null)
@@ -28,13 +27,13 @@ function CustomDropdown({ label, options, value, onChange, placeholder = 'Select
         onClick={() => setIsOpen(!isOpen)}
         style={{
           width: '100%',
-          padding: '9px 14px',
+          padding: '8px 12px',
           background: 'var(--bg-2)',
           border: `1px solid ${isOpen ? 'var(--accent)' : 'var(--border)'}`,
-          borderRadius: '9px',
+          borderRadius: '8px',
           color: 'var(--text)',
           fontFamily: 'var(--inter)',
-          fontSize: '13.5px',
+          fontSize: '13px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -55,34 +54,33 @@ function CustomDropdown({ label, options, value, onChange, placeholder = 'Select
           strokeLinecap="round"
           strokeLinejoin="round"
           style={{
-            width: '13px',
-            height: '13px',
+            width: '12px',
+            height: '12px',
             color: 'var(--text-mid)',
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s ease',
             flexShrink: 0,
-            marginLeft: '8px'
+            marginLeft: '6px'
           }}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
-      {/* Dropdown Popup Menu */}
       {isOpen && (
         <div
           style={{
             position: 'absolute',
-            top: 'calc(100% + 6px)',
+            top: 'calc(100% + 5px)',
             left: 0,
             right: 0,
             background: 'linear-gradient(180deg, #170d2b, #110822)',
             border: '1px solid var(--border)',
             borderRadius: '10px',
-            padding: '6px',
+            padding: '5px',
             boxShadow: '0 12px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(168, 85, 247, 0.15)',
             zIndex: 150,
-            maxHeight: '220px',
+            maxHeight: '200px',
             overflowY: 'auto',
             animation: 'rise 0.18s ease both'
           }}
@@ -97,9 +95,9 @@ function CustomDropdown({ label, options, value, onChange, placeholder = 'Select
                   setIsOpen(false)
                 }}
                 style={{
-                  padding: '9px 12px',
-                  borderRadius: '7px',
-                  fontSize: '13px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12.5px',
                   fontFamily: 'var(--inter)',
                   color: isSelected ? '#ffffff' : 'var(--text-mid)',
                   background: isSelected ? 'rgba(168, 85, 247, 0.25)' : 'transparent',
@@ -157,15 +155,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     }
   })
 
-  // Format Duration Helper
-  const formatDuration = (sec) => {
-    const s = parseInt(sec, 10) || 0
-    if (!s) return '0:00'
-    const m = Math.floor(s / 60)
-    const rem = s % 60
-    return `${m}:${rem.toString().padStart(2, '0')}`
-  }
-
   // Merge songs with local metadata
   const safeSongs = useMemo(() => {
     const list = Array.isArray(songs) ? songs : []
@@ -210,7 +199,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     refreshQueueState()
   }, [])
 
-  // Balanced Search & Sort Filter Pipeline
+  // Filter & Sort Pipeline
   const displayedSongs = useMemo(() => {
     let list = [...safeSongs]
 
@@ -276,13 +265,13 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     }
   }
 
-  // Open Custom Delete Confirmation Modal
+  // Request Delete Confirmation Modal
   const requestDelete = (song, e) => {
     if (e && typeof e.stopPropagation === 'function') e.stopPropagation()
     setSongToDelete(song)
   }
 
-  // Execute Actual Deletion + Stack Push
+  // Execute Deletion + Stack Push
   const confirmDeleteSong = async () => {
     if (!songToDelete) return
 
@@ -345,7 +334,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     setShowAddModal(true)
   }
 
-  // Add Song Handler with Local Cache Sync
   const handleAddSong = async (e) => {
     e.preventDefault()
     if (!formData.title.trim() || !formData.artist.trim()) {
@@ -360,7 +348,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       const cUrl = formData.coverUrl.trim() || null
       const aUrl = formData.audioUrl.trim() || null
 
-      // 1. Save metadata locally to ensure cover & duration persist even if backend drops them
       const updatedMeta = {
         ...metaMap,
         [String(songId)]: {
@@ -372,7 +359,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       localStorage.setItem('resonance_song_metadata_cache', JSON.stringify(updatedMeta))
       setMetaMap(updatedMeta)
 
-      // 2. Send payload with multiple aliases to backend
       const payload = {
         id: songId,
         title: formData.title.trim(),
@@ -402,7 +388,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
   }
 
   return (
-    <div>
+    <div style={{ width: '100%', maxWidth: '100%' }}>
       {/* Header */}
       <div className="header">
         <div>
@@ -417,16 +403,15 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
         </button>
       </div>
 
-      {/* Toolbar Panel */}
+      {/* Toolbar Filter Panel */}
       <div className="panel lib-toolbar-panel">
         <div className="lib-toolbar-layout">
-          {/* Search Box */}
           <div className="field search-box">
             <label>Search Query</label>
             <div style={{ position: 'relative', width: '100%' }}>
               <input
                 type="text"
-                placeholder="Search by title, artist, album"
+                placeholder="Search by title, artist, album..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ paddingLeft: '32px', width: '100%' }}
@@ -446,7 +431,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
             </div>
           </div>
 
-          {/* Filter Genre & Sort Dropdowns */}
           <div className="filter-sort-group">
             <div className="filter-box">
               <CustomDropdown
@@ -469,127 +453,86 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
         </div>
       </div>
 
-      {/* Main Table Panel */}
-      <div className="panel">
-        <div style={{ overflowX: 'auto' }}>
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: '48px' }}></th>
-                <th>Track Title</th>
-                <th>Artist</th>
-                <th>Genre</th>
-                <th>Duration</th>
-                <th style={{ textAlign: 'right', minWidth: '110px' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedSongs.map((song) => {
-                const isCurrent = currentSong?.id === song.id
-                const isQueued = queuedSongIds.has(song.id)
+      {/* ========================================================= */}
+      {/* 🎵 SPOTIFY-STYLE SEAMLESS MUSIC CARD GRID */}
+      {/* ========================================================= */}
+      <div className="spotify-cards-grid">
+        {displayedSongs.map((song) => {
+          const isCurrent = currentSong?.id === song.id
+          const isQueued = queuedSongIds.has(song.id)
 
-                return (
-                  <tr
-                    key={song.id}
-                    className={isCurrent ? 'row-playing' : ''}
-                    onClick={() => onSelectSong && onSelectSong(song)}
-                    style={{ cursor: 'pointer' }}
+          return (
+            <div
+              key={song.id}
+              className={`spotify-card ${isCurrent ? 'card-playing' : ''}`}
+              onClick={() => onSelectSong && onSelectSong(song)}
+            >
+              {/* Artwork Box */}
+              <div className="spotify-art-wrapper">
+                <CoverArt url={song.coverUrl} title={song.title} />
+
+                {/* Floating Play Button that rises on card hover */}
+                <button
+                  type="button"
+                  className={`spotify-hover-play ${isCurrent && isPlaying ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (isCurrent && isPlaying) {
+                      play(song)
+                    } else {
+                      play(song, displayedSongs)
+                    }
+                  }}
+                  title={isCurrent && isPlaying ? 'Pause' : 'Play'}
+                >
+                  <span style={{ fontSize: isCurrent && isPlaying ? '14px' : '15px', marginLeft: isCurrent && isPlaying ? '0' : '2px' }}>
+                    {isCurrent && isPlaying ? '❚❚' : '▶'}
+                  </span>
+                </button>
+
+                {/* Card Quick Action Corner Icons (Queue & Delete) */}
+                <div className="spotify-card-overlay-actions">
+                  <button
+                    type="button"
+                    className={`card-icon-action ${isQueued ? 'queued' : ''}`}
+                    onClick={(e) => handleToggleQueue(song, e)}
+                    title={isQueued ? 'In Queue' : 'Add to Queue'}
                   >
-                    <td className="cell-play">
-                      <div className="row-cover">
-                        <div className={`cover ${isCurrent && isPlaying ? 'cover-playing' : ''}`}>
-                          <CoverArt url={song.coverUrl} title={song.title} />
-                        </div>
-                        <button
-                          type="button"
-                          className="play-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (isCurrent && isPlaying) {
-                              play(song)
-                            } else {
-                              play(song, displayedSongs)
-                            }
-                          }}
-                          title={isCurrent && isPlaying ? 'Pause' : 'Play'}
-                        >
-                          {isCurrent && isPlaying ? '❚❚' : '▶'}
-                        </button>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="song-title-cell" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>{song.title}</span>
-                        {isQueued && (
-                          <span
-                            style={{
-                              fontSize: '9.5px',
-                              background: 'rgba(168,85,247,0.2)',
-                              color: 'var(--accent-2)',
-                              padding: '1px 5px',
-                              borderRadius: '4px',
-                              border: '1px solid var(--border)'
-                            }}
-                          >
-                            Queued
-                          </span>
-                        )}
-                      </div>
-                      <div className="song-id-cell">ID #{song.id}</div>
-                    </td>
-                    <td style={{ color: 'var(--text-mid)' }}>{song.artist}</td>
-                    <td>
-                      <span className="genre-pill">{song.genre || 'General'}</span>
-                    </td>
-                    <td style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--text-dim)' }}>
-                      {formatDuration(song.durationSeconds)}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          onClick={(e) => handleToggleQueue(song, e)}
-                          title={isQueued ? 'Remove from Queue' : 'Add to Queue'}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '11px',
-                            background: isQueued ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.08)',
-                            borderColor: isQueued ? 'var(--accent)' : 'var(--border)',
-                            color: isQueued ? '#fff' : 'var(--text-mid)',
-                            boxShadow: isQueued ? '0 0 10px rgba(168,85,247,0.35)' : 'none'
-                          }}
-                        >
-                          {isQueued ? '✓ 📑' : '+ 📑'}
-                        </button>
+                    📑
+                  </button>
+                  <button
+                    type="button"
+                    className="card-icon-action delete"
+                    onClick={(e) => requestDelete(song, e)}
+                    title="Delete Track"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
 
-                        <button
-                          type="button"
-                          className="btn btn-danger btn-sm"
-                          onClick={(e) => requestDelete(song, e)}
-                          title="Delete Track"
-                          style={{ padding: '4px 8px' }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-
-          {displayedSongs.length === 0 && (
-            <div className="empty">
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔍</div>
-              <p>No matching songs found</p>
+              {/* Title & Artist Text (Pure Spotify Style) */}
+              <div className="spotify-card-info">
+                <div className="spotify-card-title" title={song.title}>
+                  {song.title}
+                </div>
+                <div className="spotify-card-artist" title={song.artist}>
+                  {song.artist}
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+          )
+        })}
       </div>
 
-      {/* Modern Centered Delete Confirmation Modal */}
+      {displayedSongs.length === 0 && (
+        <div className="panel empty" style={{ padding: '40px 20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '36px', marginBottom: '10px' }}>🔍</div>
+          <p style={{ color: 'var(--text-mid)', fontSize: '14px' }}>No songs found in your library</p>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
       {songToDelete && (
         <div
           style={{
@@ -644,37 +587,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
 
             <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: 'var(--text-mid)', lineHeight: 1.5 }}>
               Are you sure you want to remove <strong style={{ color: '#fff' }}>"{songToDelete.title}"</strong>?
-              <br />
-              <span style={{ fontSize: '12px', color: 'var(--accent-2)' }}>
-                You can undo and restore it anytime from Data Structures.
-              </span>
             </p>
-
-            <div
-              style={{
-                background: 'rgba(168, 85, 247, 0.08)',
-                border: '1px solid rgba(168, 85, 247, 0.25)',
-                borderRadius: '10px',
-                padding: '10px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '22px',
-                textAlign: 'left'
-              }}
-            >
-              <div style={{ width: '38px', height: '38px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
-                <CoverArt url={songToDelete.coverUrl} title={songToDelete.title} />
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {songToDelete.title}
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
-                  {songToDelete.artist} • ID #{songToDelete.id}
-                </div>
-              </div>
-            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <button
@@ -763,7 +676,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Starboy"
+                    placeholder="e.g. Sanda Numba Awidin"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
@@ -776,7 +689,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                   <input
                     type="text"
                     required
-                    placeholder="e.g. The Weeknd"
+                    placeholder="e.g. Uvindu Ayshcharya"
                     value={formData.artist}
                     onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
                   />
@@ -785,7 +698,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                   <label>Album</label>
                   <input
                     type="text"
-                    placeholder="e.g. Starboy"
+                    placeholder="e.g. Single"
                     value={formData.album}
                     onChange={(e) => setFormData({ ...formData, album: e.target.value })}
                   />
@@ -797,7 +710,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                   <label>Genre</label>
                   <input
                     type="text"
-                    placeholder="e.g. Synthwave"
+                    placeholder="e.g. Pop"
                     value={formData.genre}
                     onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
                   />
@@ -807,7 +720,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                   <input
                     type="number"
                     min="1"
-                    placeholder="e.g. 210 (3:30)"
+                    placeholder="e.g. 210"
                     value={formData.durationSeconds}
                     onChange={(e) => setFormData({ ...formData, durationSeconds: e.target.value })}
                   />
@@ -828,7 +741,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                 <label>Cover Image URL</label>
                 <input
                   type="text"
-                  placeholder="/covers/1.jpg or https://..."
+                  placeholder="/image/1.jpeg or https://..."
                   value={formData.coverUrl}
                   onChange={(e) => setFormData({ ...formData, coverUrl: e.target.value })}
                 />

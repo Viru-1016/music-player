@@ -1,93 +1,48 @@
-import React, { useState, useEffect } from 'react'
-import { getBaseUrl, setBaseUrl, checkConnection } from '../api'
+import React from 'react'
+import { useAuth } from './AuthContext'
 
-export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect, isOpen }) {
-  const [connected, setConnected] = useState(false)
-  const [checking, setChecking] = useState(false)
-  const [urlInput, setUrlInput] = useState(getBaseUrl() || 'http://localhost:8080/api')
-
-  const checkStatus = async () => {
-    setChecking(true)
-    try {
-      const ok = await checkConnection()
-      setConnected(Boolean(ok))
-    } catch (_) {
-      setConnected(false)
-    } finally {
-      setChecking(false)
-    }
-  }
-
-  useEffect(() => {
-    checkStatus()
-    const interval = setInterval(checkStatus, 10000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleReconnect = async () => {
-    setChecking(true)
-    try {
-      const ok = await checkConnection()
-      setConnected(Boolean(ok))
-      if (ok) {
-        if (onToast) onToast('Connected to backend!', 'ok')
-        if (typeof onReconnect === 'function') onReconnect()
-      } else {
-        if (onToast) onToast('Backend is offline. Check port 8080.', 'err')
-      }
-    } catch (err) {
-      setConnected(false)
-      if (onToast) onToast('Failed to connect to backend', 'err')
-    } finally {
-      setChecking(false)
-    }
-  }
-
-  const handleUrlChange = (e) => {
-    const val = e.target.value
-    setUrlInput(val)
-    setBaseUrl(val)
-  }
+export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect, isOpen, onClose }) {
+  const { user, setAuthModalOpen, setAuthMode, logout } = useAuth()
 
   const navItems = [
     { id: 'library', label: 'Music Library', icon: '🎵' },
     { id: 'search', label: 'Search & Sort', icon: '⚡' },
     { id: 'queue', label: 'Playback Queue', icon: '📑' },
     { id: 'structures', label: 'Data Structures', icon: '📦' },
-    { id: 'trees', label: 'Tree Visualizer', icon: '🌳' },
+    { id: 'trees', label: 'Tree Visualizer', icon: '🌲' },
     { id: 'graph', label: 'Genre Graph', icon: '🕸️' },
   ]
 
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-      {/* Brand */}
-      <div>
-        <div className="brand">
-          <div className="brand-mark">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18V5l12-2v13" />
-              <circle cx="6" cy="18" r="3" />
-              <circle cx="18" cy="16" r="3" />
-            </svg>
-          </div>
+    <aside className={`sidebar ${isOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+      {/* Brand Header with Close Squircle Icon */}
+      <div className="brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="logo-box">🎵</div>
           <div>
-            <div className="brand-text">Resonance</div>
-            <div className="brand-sub">DSA Music Hub</div>
+            <div className="brand-name">Resonance</div>
+            <div className="brand-sub">DSA MUSIC HUB</div>
           </div>
         </div>
 
-        <div className="eq" style={{ marginTop: '12px' }}>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+        {/* Squircle Hamburger Close Button inside Sidebar */}
+        <button
+          type="button"
+          className="sidebar-header-toggle-btn"
+          onClick={onClose}
+          title="Collapse Sidebar"
+        >
+          <div className="squircle-hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </button>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation Links */}
+      <div className="nav-label">NAVIGATION</div>
       <nav className="nav">
-        <div className="nav-label">Navigation</div>
         {navItems.map((item) => (
           <button
             key={item.id}
@@ -95,35 +50,103 @@ export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect,
             className={`nav-btn ${activeTab === item.id ? 'active' : ''}`}
             onClick={() => setActiveTab(item.id)}
           >
-            <span style={{ fontSize: '15px' }}>{item.icon}</span>
+            <span className="nav-icon">{item.icon}</span>
             <span>{item.label}</span>
           </button>
         ))}
       </nav>
 
-      {/* Connection Box */}
-      <div className="conn-box">
-        <div className="conn-row" style={{ justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-            <span className={`dot ${connected ? 'ok' : 'bad'}`} />
-            <span>{checking ? 'Checking...' : connected ? 'Connected' : 'Offline'}</span>
+      {/* User Session Section */}
+      <div style={{ marginTop: 'auto', padding: '12px 0', borderTop: '1px solid var(--border)' }}>
+        {user ? (
+          <div
+            style={{
+              padding: '10px 12px',
+              background: 'var(--bg-2)',
+              borderRadius: '10px',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              marginBottom: '10px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <img
+                src={user.avatar}
+                alt="Avatar"
+                style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--panel)', flexShrink: 0 }}
+              />
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {user.username}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--accent-2)' }}>Logged In</div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={logout}
+              title="Logout"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-dim)',
+                cursor: 'pointer',
+                fontSize: '15px',
+                padding: '4px'
+              }}
+            >
+              🚪
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+            <button
+              type="button"
+              className="btn btn-sm"
+              style={{ justifyContent: 'center', fontSize: '11.5px', padding: '7px 0' }}
+              onClick={() => {
+                setAuthMode('login')
+                setAuthModalOpen(true)
+              }}
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              style={{ justifyContent: 'center', fontSize: '11.5px', padding: '7px 0' }}
+              onClick={() => {
+                setAuthMode('signup')
+                setAuthModalOpen(true)
+              }}
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
+
+        {/* Backend Status */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#4ade80' }}>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }}></span>
+            Connected
           </div>
           <button
             type="button"
-            onClick={handleReconnect}
             className="btn btn-sm"
-            style={{ padding: '3px 8px', fontSize: '10px' }}
+            onClick={onReconnect}
+            style={{ padding: '2px 8px', fontSize: '10.5px' }}
           >
             Retry
           </button>
         </div>
-        <input
-          type="text"
-          className="conn-input"
-          value={urlInput}
-          onChange={handleUrlChange}
-          placeholder="http://localhost:8080/api"
-        />
+        <div style={{ fontSize: '10.5px', color: 'var(--text-dim)', fontFamily: 'var(--mono)', wordBreak: 'break-all' }}>
+          http://localhost:8080/api
+        </div>
       </div>
     </aside>
   )

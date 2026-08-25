@@ -9,6 +9,8 @@ import Graph from './components/Graph'
 import * as ToastModule from './components/Toast'
 import NowPlayingBar from './components/NowPlayingBar'
 import { PlayerProvider, usePlayer } from './components/PlayerContext'
+import { AuthProvider } from './components/AuthContext'
+import AuthModal from './components/AuthModal'
 import { api } from './api'
 
 function AppContent() {
@@ -16,7 +18,9 @@ function AppContent() {
   const [songs, setSongs] = useState([])
   const [toasts, setToasts] = useState([])
   const [selectedSong, setSelectedSong] = useState(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  
+  // Sidebar state (Default open on desktop, toggleable anytime)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   const { updatePlaylist } = usePlayer()
 
@@ -54,22 +58,21 @@ function AppContent() {
   const ToastComponent = ToastModule.ToastContainer || ToastModule.Toast || ToastModule.default
 
   return (
-    <div className="app">
-      {/* Mobile Top Navigation Bar */}
-      <div className="mobile-topbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '20px' }}>🎵</span>
-          <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>Resonance</span>
-        </div>
-        <button
-          type="button"
-          className="btn btn-sm"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          style={{ padding: '6px 12px' }}
-        >
-          {isSidebarOpen ? '✕ Close' : '☰ Menu'}
-        </button>
-      </div>
+    <div className={`app ${isSidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
+      {/* Floating Toggle Button (Always visible on screen) */}
+      {/* Floating Neon Squircle Hamburger Toggle Button */}
+<button
+  type="button"
+  className={`sidebar-toggle-btn ${isSidebarOpen ? 'open' : 'closed'}`}
+  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+  title={isSidebarOpen ? 'Close Sidebar' : 'Open Sidebar'}
+>
+  <div className="squircle-hamburger">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</button>
 
       {/* Backdrop for Mobile */}
       {isSidebarOpen && (
@@ -79,17 +82,20 @@ function AppContent() {
         />
       )}
 
+      {/* Slide-in Animated Sidebar */}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={(tab) => {
           setActiveTab(tab)
-          setIsSidebarOpen(false)
+          if (window.innerWidth < 768) setIsSidebarOpen(false)
         }} 
         onToast={showToast} 
         onReconnect={fetchSongs}
         isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
+      {/* Main Content Area */}
       <main className="main">
         {activeTab === 'library' && (
           <Library 
@@ -116,6 +122,8 @@ function AppContent() {
 
       <NowPlayingBar />
 
+      <AuthModal onToast={showToast} />
+
       {ToastComponent && <ToastComponent toasts={toasts} setToasts={setToasts} />}
     </div>
   )
@@ -123,8 +131,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <PlayerProvider>
-      <AppContent />
-    </PlayerProvider>
+    <AuthProvider>
+      <PlayerProvider>
+        <AppContent />
+      </PlayerProvider>
+    </AuthProvider>
   )
 }
