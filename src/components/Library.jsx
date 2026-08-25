@@ -631,127 +631,193 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       )}
 
       {/* Add Song Modal */}
+      {/* ========================================================= */}
+      {/* 🟣 COMPACT SLEEK ADD SONG MODAL */}
+      {/* ========================================================= */}
       {showAddModal && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(5, 2, 8, 0.85)',
-            backdropFilter: 'blur(8px)',
+            background: 'rgba(5, 2, 10, 0.85)',
+            backdropFilter: 'blur(10px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 999,
+            zIndex: 1100,
             padding: '16px'
           }}
+          onClick={() => !loading && setShowAddModal(false)}
         >
-          <div className="panel" style={{ width: '100%', maxWidth: '460px', margin: 0, padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '440px', /* Small and Compact */
+              background: 'linear-gradient(145deg, #190e30, #110822)',
+              border: '1px solid rgba(168, 85, 247, 0.45)',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(168, 85, 247, 0.25)',
+              animation: 'rise 0.22s ease-out',
+              position: 'relative'
+            }}
+          >
+            {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <div className="panel-title" style={{ fontSize: '17px', margin: 0 }}>
-                <span>🎵</span> Add New Song
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>🎵</span>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#ffffff' }}>
+                  Add New Song
+                </h3>
               </div>
               <button
                 type="button"
-                className="btn btn-sm"
                 onClick={() => setShowAddModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-dim)',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleAddSong} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div className="grid">
-                <div className="field">
-                  <label>Song ID *</label>
+            {/* Compact Form */}
+            <form onSubmit={handleAddSong} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Song ID *</label>
                   <input
                     type="number"
                     required
                     min="1"
                     value={formData.id}
                     onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                    style={{ padding: '8px 10px', fontSize: '13px' }}
                   />
                 </div>
-                <div className="field">
-                  <label>Title *</label>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Title *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Sanda Numba Awidin"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    style={{ padding: '8px 10px', fontSize: '13px' }}
                   />
                 </div>
               </div>
 
-              <div className="grid">
-                <div className="field">
-                  <label>Artist *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Artist *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Uvindu Ayshcharya"
                     value={formData.artist}
                     onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
+                    style={{ padding: '8px 10px', fontSize: '13px' }}
                   />
                 </div>
-                <div className="field">
-                  <label>Album</label>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Album</label>
                   <input
                     type="text"
                     placeholder="e.g. Single"
                     value={formData.album}
                     onChange={(e) => setFormData({ ...formData, album: e.target.value })}
+                    style={{ padding: '8px 10px', fontSize: '13px' }}
                   />
                 </div>
               </div>
 
-              <div className="grid">
-                <div className="field">
-                  <label>Genre</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Genre</label>
                   <input
                     type="text"
                     placeholder="e.g. Pop"
                     value={formData.genre}
                     onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
+                    style={{ padding: '8px 10px', fontSize: '13px' }}
                   />
                 </div>
-                <div className="field">
-                  <label>Duration (Seconds)</label>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Duration (Seconds)</label>
                   <input
                     type="number"
                     min="1"
                     placeholder="e.g. 210"
                     value={formData.durationSeconds}
                     onChange={(e) => setFormData({ ...formData, durationSeconds: e.target.value })}
+                    style={{ padding: '8px 10px', fontSize: '13px' }}
                   />
                 </div>
               </div>
 
-              <div className="field">
-                <label>Audio (.mp3) URL</label>
+              <div className="field" style={{ margin: 0 }}>
+                <label style={{ fontSize: '11px', marginBottom: '4px' }}>Audio (.mp3) URL</label>
                 <input
                   type="text"
                   placeholder="/audio/1.mp3 or https://..."
                   value={formData.audioUrl}
                   onChange={(e) => setFormData({ ...formData, audioUrl: e.target.value })}
+                  style={{ padding: '8px 10px', fontSize: '13px' }}
                 />
               </div>
 
-              <div className="field">
-                <label>Cover Image URL</label>
+              <div className="field" style={{ margin: 0 }}>
+                <label style={{ fontSize: '11px', marginBottom: '4px' }}>Cover Image URL</label>
                 <input
                   type="text"
                   placeholder="/image/1.jpeg or https://..."
                   value={formData.coverUrl}
                   onChange={(e) => setFormData({ ...formData, coverUrl: e.target.value })}
+                  style={{ padding: '8px 10px', fontSize: '13px' }}
                 />
               </div>
 
-              <div className="row" style={{ justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button type="button" className="btn" onClick={() => setShowAddModal(false)}>
+              {/* Action Buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  disabled={loading}
+                  style={{
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={loading}>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, var(--accent-2), var(--accent-dim))',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 18px rgba(168, 85, 247, 0.45)'
+                  }}
+                >
                   {loading ? 'Saving...' : 'Save Song'}
                 </button>
               </div>
