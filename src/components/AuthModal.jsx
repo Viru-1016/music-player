@@ -49,7 +49,6 @@ export default function AuthModal({ onToast }) {
         zIndex: 1100,
         padding: '16px'
       }}
-      onClick={() => setAuthModalOpen(false)}
     >
       <div
         onClick={(e) => e.stopPropagation()}

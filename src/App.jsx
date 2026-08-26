@@ -3,7 +3,6 @@ import Sidebar from './components/Sidebar'
 import Library from './components/Library'
 import YourLibrary from './components/YourLibrary'
 import EditSongs from './components/EditSongs'
-import SearchSort from './components/SearchSort'
 import Queue from './components/Queue'
 import Structures from './components/Structures'
 import Trees from './components/Trees'
@@ -11,37 +10,51 @@ import Graph from './components/Graph'
 import { ToastContainer } from './components/Toast'
 import NowPlayingBar from './components/NowPlayingBar'
 import { PlayerProvider, usePlayer } from './components/PlayerContext'
-import { AuthProvider } from './components/AuthContext'
+import { AuthProvider, useAuth } from './components/AuthContext'
 import AuthModal from './components/AuthModal'
+import LoginPage from './components/LoginPage'
+import UserManagement from './components/UserManagement'
+import QueueSidebar from './components/QueueSidebar'
 import { api } from './api'
 
 function AppContent() {
+  const { user, splashState } = useAuth()
   const [activeTab, setActiveTab] = useState('library')
   const [songs, setSongs] = useState([])
   const [toasts, setToasts] = useState([])
   const [selectedSong, setSelectedSong] = useState(null)
 
-  // User Saved Library State
-  const [userLibraryIds, setUserLibraryIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('resonance_user_library') || '[]')
-    } catch (_) {
-      return []
-    }
-  })
+  // User Saved Library State per user session (empty for guests)
+  const [userLibraryIds, setUserLibraryIds] = useState([])
 
-  // Global Playback Queue State
-  const [queuedSongIds, setQueuedSongIds] = useState(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('resonance_playback_queue') || '[]')
-      return stored.map((id) => String(id))
-    } catch (_) {
-      return []
+  const {
+    queuedSongIds,
+    toggleQueue: playerToggleQueue,
+    setQueuedIds,
+    updatePlaylist,
+    isQueueOpen
+  } = usePlayer()
+
+  useEffect(() => {
+    if (user?.id) {
+      try {
+        const saved = localStorage.getItem(`resonance_user_library_${user.id}`)
+        setUserLibraryIds(saved ? JSON.parse(saved) : [])
+      } catch (_) {
+        setUserLibraryIds([])
+      }
+    } else {
+      setUserLibraryIds([])
     }
-  })
+  }, [user?.id])
 
   const toggleUserLibrary = (song) => {
     if (!song || song.id === undefined) return
+    if (!user) {
+      showToast('Please Log In to save songs to Your Library!', 'err')
+      return
+    }
+
     const songId = song.id
     setUserLibraryIds((prev) => {
       const exists = prev.some((id) => String(id) === String(songId))
@@ -53,35 +66,30 @@ function AppContent() {
         next = [...prev, songId]
         showToast(`"${song.title || 'Song'}" added to Your Library!`, 'ok')
       }
-      localStorage.setItem('resonance_user_library', JSON.stringify(next))
+      localStorage.setItem(`resonance_user_library_${user.id}`, JSON.stringify(next))
       return next
     })
   }
 
   const toggleQueue = (song) => {
     if (!song || song.id === undefined) return
-    const songIdStr = String(song.id)
-    setQueuedSongIds((prev) => {
-      const exists = prev.some((id) => String(id) === songIdStr)
-      let next
-      if (exists) {
-        next = prev.filter((id) => String(id) !== songIdStr)
-        showToast(`"${song.title || 'Song'}" removed from Queue`, 'info')
-        api.dequeue(song.id).catch(() => {})
-      } else {
-        next = [...prev, songIdStr]
-        showToast(`"${song.title || 'Song'}" added to Queue!`, 'ok')
-        api.enqueue(song).catch(() => {})
-      }
-      localStorage.setItem('resonance_playback_queue', JSON.stringify(next))
-      return next
-    })
+    const isAdded = playerToggleQueue(song)
+    if (isAdded) {
+      showToast(`"${song.title || 'Song'}" added to Queue!`, 'ok')
+    } else {
+      showToast(`"${song.title || 'Song'}" removed from Queue`, 'info')
+    }
   }
 
   // Sidebar state (Default open on desktop, toggleable anytime)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
-  const { updatePlaylist } = usePlayer()
+  // 🔄 When Queue sidebar opens, automatically collapse the main navigation sidebar
+  useEffect(() => {
+    if (isQueueOpen) {
+      setIsSidebarOpen(false)
+    }
+  }, [isQueueOpen])
 
   const showToast = (message, type = 'info') => {
     const id = Date.now()
@@ -114,8 +122,15 @@ function AppContent() {
     fetchSongs()
   }, [])
 
+  // Tab guard for guests & non-admin users
+  useEffect(() => {
+    if (user?.role !== 'admin' && activeTab !== 'library' && activeTab !== 'your-library') {
+      setActiveTab('library')
+    }
+  }, [user, activeTab])
+
   return (
-    <div className={`app ${isSidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
+    <div className={`app ${isSidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'} ${isQueueOpen ? 'queue-drawer-open' : ''}`}>
       {/* Floating Toggle Button (Always visible on screen) */}
       {/* Floating Neon Squircle Hamburger Toggle Button */}
 <button
@@ -152,68 +167,103 @@ function AppContent() {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area with Smooth Page/Tab Switch Transition */}
       <main className="main">
-        {activeTab === 'library' && (
-          <Library 
-            songs={songs} 
-            onRefresh={fetchSongs} 
-            onToast={showToast}
-            onSelectSong={setSelectedSong}
-            selectedSong={selectedSong}
-            userLibraryIds={userLibraryIds}
-            onToggleUserLibrary={toggleUserLibrary}
-            queuedSongIds={queuedSongIds}
-            onToggleQueue={toggleQueue}
-          />
-        )}
+        <div key={activeTab} className="main-page-transition">
+          {activeTab === 'library' && (
+            <Library 
+              songs={songs} 
+              onRefresh={fetchSongs} 
+              onToast={showToast}
+              onSelectSong={setSelectedSong}
+              selectedSong={selectedSong}
+              userLibraryIds={userLibraryIds}
+              onToggleUserLibrary={toggleUserLibrary}
+              queuedSongIds={queuedSongIds}
+              onToggleQueue={toggleQueue}
+            />
+          )}
 
-        {activeTab === 'your-library' && (
-          <YourLibrary
-            songs={songs}
-            userLibraryIds={userLibraryIds}
-            onToggleUserLibrary={toggleUserLibrary}
-            queuedSongIds={queuedSongIds}
-            onToggleQueue={toggleQueue}
-            onToast={showToast}
-            onSelectSong={setSelectedSong}
-          />
-        )}
+          {activeTab === 'your-library' && (
+            <YourLibrary
+              songs={songs}
+              userLibraryIds={userLibraryIds}
+              onToggleUserLibrary={toggleUserLibrary}
+              queuedSongIds={queuedSongIds}
+              onToggleQueue={toggleQueue}
+              onToast={showToast}
+              onSelectSong={setSelectedSong}
+            />
+          )}
 
-        {activeTab === 'edit-songs' && (
-          <EditSongs 
-            songs={songs} 
-            onRefresh={fetchSongs} 
-            onToast={showToast} 
-          />
-        )}
+          {activeTab === 'users' && <UserManagement onToast={showToast} />}
 
-        {activeTab === 'search' && <SearchSort songs={songs} onToast={showToast} />}
-        {activeTab === 'queue' && (
-          <Queue
-            songs={songs}
-            queuedSongIds={queuedSongIds}
-            onToggleQueue={toggleQueue}
-            setQueuedSongIds={setQueuedSongIds}
-            onToast={showToast}
-          />
-        )}
-        {activeTab === 'structures' && (
-          <Structures 
-            songs={songs} 
-            onToast={showToast} 
-            onRefresh={fetchSongs} 
-          />
-        )}
-        {activeTab === 'trees' && <Trees songs={songs} onToast={showToast} />}
-        {activeTab === 'graph' && <Graph songs={songs} onToast={showToast} />}
+          {activeTab === 'edit-songs' && (
+            <EditSongs 
+              songs={songs} 
+              onRefresh={fetchSongs} 
+              onToast={showToast} 
+            />
+          )}
+
+          {activeTab === 'queue' && (
+            <Queue
+              songs={songs}
+              queuedSongIds={queuedSongIds}
+              onToggleQueue={toggleQueue}
+              setQueuedSongIds={setQueuedIds}
+              onToast={showToast}
+            />
+          )}
+          {activeTab === 'structures' && (
+            <Structures 
+              songs={songs} 
+              onToast={showToast} 
+              onRefresh={fetchSongs} 
+            />
+          )}
+          {activeTab === 'trees' && <Trees songs={songs} onToast={showToast} />}
+          {activeTab === 'graph' && <Graph songs={songs} onToast={showToast} />}
+        </div>
       </main>
+
+      {/* Slide-in Queue Sidebar (Spotify-style right drawer) */}
+      <QueueSidebar onToast={showToast} />
 
       <NowPlayingBar />
 
-      <AuthModal onToast={showToast} />
+      <LoginPage onToast={showToast} />
 
       <ToastContainer toasts={toasts} />
+
+      {/* 🚀 Login / Logout Smooth Splash Animation Overlay */}
+      {splashState && (
+        <div className="auth-splash-overlay">
+          <div
+            style={{
+              width: '72px',
+              height: '72px',
+              borderRadius: '24px',
+              background: 'linear-gradient(135deg, var(--accent), #7c3aed)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '34px',
+              color: '#fff',
+              marginBottom: '16px',
+              boxShadow: '0 0 35px rgba(168, 85, 247, 0.6)'
+            }}
+          >
+            🎵
+          </div>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', margin: '0 0 6px', letterSpacing: '-0.5px' }}>
+            {splashState.title}
+          </h2>
+          <p style={{ fontSize: '13.5px', color: 'var(--accent-2)', margin: 0, fontWeight: 600 }}>
+            {splashState.subtitle}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

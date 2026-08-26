@@ -1,11 +1,15 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../api'
 import CoverArt from './CoverArt'
+import { FiEdit, FiTrash2 } from 'react-icons/fi'
 
 export default function EditSongs({ songs = [], onRefresh, onToast }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [editingSong, setEditingSong] = useState(null)
+  const [songToDelete, setSongToDelete] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // Local metadata storage map for persistent cover, duration & language
   const [metaMap, setMetaMap] = useState(() => {
@@ -28,6 +32,21 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
     audioUrl: '',
     coverUrl: ''
   })
+
+  // 🧊 Freeze background when modal is open
+  useEffect(() => {
+    if (editingSong || songToDelete) {
+      document.body.classList.add('modal-active-freeze')
+      document.documentElement.classList.add('modal-active-freeze')
+    } else {
+      document.body.classList.remove('modal-active-freeze')
+      document.documentElement.classList.remove('modal-active-freeze')
+    }
+    return () => {
+      document.body.classList.remove('modal-active-freeze')
+      document.documentElement.classList.remove('modal-active-freeze')
+    }
+  }, [editingSong, songToDelete])
 
   // Merge songs with local metadata
   const safeSongs = useMemo(() => {
@@ -115,6 +134,7 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
         duration: durSec,
         durationSeconds: durSec,
         duration_seconds: durSec,
+        rating: Number(editingSong?.rating) || 8.5,
         audioUrl: aUrl,
         audio_url: aUrl,
         coverUrl: cUrl,
@@ -133,6 +153,37 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
       if (onToast) onToast(err.message || 'Failed to update song', 'err')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Delete song and push to Recently Deleted (Stack)
+  const confirmDeleteSong = async () => {
+    if (!songToDelete) return
+
+    setDeleteLoading(true)
+    const id = songToDelete.id
+
+    try {
+      // 1. Save to local trash stack
+      const existingTrash = JSON.parse(localStorage.getItem('resonance_trash_stack') || '[]')
+      localStorage.setItem('resonance_trash_stack', JSON.stringify([...existingTrash, songToDelete]))
+
+      // 2. Push to backend stack API
+      try {
+        await api.pushStack(songToDelete)
+      } catch (_) {}
+
+      // 3. Delete song via API
+      await api.deleteSong(id)
+      if (onToast) onToast(`"${songToDelete.title}" moved to Recently Deleted (Stack)`, 'ok')
+
+      setSongToDelete(null)
+      if (typeof onRefresh === 'function') await onRefresh()
+    } catch (err) {
+      console.error('Delete error:', err)
+      if (onToast) onToast('Failed to delete song', 'err')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -248,14 +299,28 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
                   <td style={{ padding: '12px 10px', color: 'var(--text-dim)', fontFamily: 'var(--mono)' }}>
                     {Math.floor(song.durationSeconds / 60)}:{(song.durationSeconds % 60).toString().padStart(2, '0')}
                   </td>
-                  <td style={{ padding: '12px 10px', textAlign: 'right' }}>
+                  <td style={{ padding: '12px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button
                       type="button"
                       className="btn btn-primary btn-sm"
                       onClick={() => handleOpenEditModal(song)}
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                      style={{ padding: '6px 12px', fontSize: '12px', marginRight: '6px' }}
                     >
-                      ✏️ Edit
+                      <FiEdit style={{ marginRight: '4px' }} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => setSongToDelete(song)}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        color: '#f87171'
+                      }}
+                    >
+                      <FiTrash2 style={{ marginRight: '4px' }} /> Delete
                     </button>
                   </td>
                 </tr>
@@ -266,26 +331,35 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
       </div>
 
       {/* 🟣 EDIT SONG POPUP MODAL */}
-      {editingSong && (
+      {editingSong && createPortal(
         <div
+          className="modal-backdrop-animate"
+          onClick={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
-            inset: 0,
-            background: 'rgba(5, 2, 10, 0.85)',
-            backdropFilter: 'blur(10px)',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1100,
+            zIndex: 99999,
             padding: '16px'
           }}
-          onClick={() => !loading && setEditingSong(null)}
         >
           <div
+            className="modal-animate-pop"
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%',
               maxWidth: '500px',
+              maxHeight: '92vh',
+              overflowY: 'auto',
               boxSizing: 'border-box',
               background: 'linear-gradient(145deg, #190e30, #110822)',
               border: '1px solid rgba(168, 85, 247, 0.45)',
@@ -293,11 +367,10 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
               padding: '24px',
               boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(168, 85, 247, 0.25)',
               animation: 'rise 0.22s ease-out',
-              position: 'relative',
-              overflow: 'hidden'
+              position: 'relative'
             }}
           >
-            {/* Modal Header */}
+            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '18px' }}>✏️</span>
@@ -321,16 +394,23 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
               </button>
             </div>
 
-            {/* Balanced Edit Form */}
+            {/* Form */}
             <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
                 <div className="field" style={{ margin: 0 }}>
-                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Song ID</label>
+                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>ID (Fixed)</label>
                   <input
-                    type="number"
+                    type="text"
                     disabled
                     value={editFormData.id}
-                    style={{ padding: '8px 10px', fontSize: '13px', opacity: 0.6, cursor: 'not-allowed', width: '100%', boxSizing: 'border-box' }}
+                    style={{
+                      padding: '8px 10px',
+                      fontSize: '13px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      opacity: 0.6,
+                      cursor: 'not-allowed'
+                    }}
                   />
                 </div>
                 <div className="field" style={{ margin: 0 }}>
@@ -381,7 +461,6 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
                   <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Language</label>
                   <input
                     type="text"
-                    placeholder="e.g. Sinhala"
                     value={editFormData.language}
                     onChange={(e) => setEditFormData({ ...editFormData, language: e.target.value })}
                     style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
@@ -463,7 +542,81 @@ export default function EditSongs({ songs = [], onRefresh, onToast }) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 🔴 DELETE CONFIRMATION MODAL */}
+      {songToDelete && createPortal(
+        <div
+          className="modal-backdrop-animate"
+          onClick={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '16px'
+          }}
+        >
+          <div
+            className="modal-animate-pop"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '400px',
+              background: 'linear-gradient(145deg, #240e1a, #150912)',
+              border: '1px solid rgba(239, 68, 68, 0.45)',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(239, 68, 68, 0.2)',
+              textAlign: 'center'
+            }}
+          >
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🗑️</div>
+            <h3 style={{ color: '#fff', fontSize: '18px', margin: '0 0 8px' }}>
+              Delete "{songToDelete.title}"?
+            </h3>
+            <p style={{ color: 'var(--text-mid)', fontSize: '13px', margin: '0 0 20px' }}>
+              This track will be moved to the <strong>Recently Deleted (Stack)</strong>. You can restore it anytime!
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setSongToDelete(null)}
+                style={{ justifyContent: 'center', padding: '10px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={confirmDeleteSong}
+                disabled={deleteLoading}
+                style={{
+                  justifyContent: 'center',
+                  padding: '10px',
+                  background: '#ef4444',
+                  borderColor: '#f87171',
+                  color: '#fff'
+                }}
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete Track'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   )

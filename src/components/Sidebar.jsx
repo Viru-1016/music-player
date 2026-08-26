@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from './AuthContext'
 import {
   FiMusic,
@@ -8,24 +9,46 @@ import {
   FiLayers,
   FiGitBranch,
   FiLogOut,
-  FiBookmark
+  FiBookmark,
+  FiTrash2,
+  FiUsers
 } from 'react-icons/fi'
 import { TbHierarchy2 } from 'react-icons/tb'
 import { RiDiscLine } from 'react-icons/ri'
 
 export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect, isOpen, onClose }) {
   const { user, setAuthModalOpen, setAuthMode, logout } = useAuth()
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
 
-  const navItems = [
+  // 🧊 Freeze background when logout modal is open
+  useEffect(() => {
+    if (showLogoutModal) {
+      document.body.classList.add('modal-active-freeze')
+      document.documentElement.classList.add('modal-active-freeze')
+    } else {
+      document.body.classList.remove('modal-active-freeze')
+      document.documentElement.classList.remove('modal-active-freeze')
+    }
+    return () => {
+      document.body.classList.remove('modal-active-freeze')
+      document.documentElement.classList.remove('modal-active-freeze')
+    }
+  }, [showLogoutModal])
+
+  const allNavItems = [
     { id: 'library', label: 'Music Library', icon: <FiMusic /> },
     { id: 'your-library', label: 'Your Library', icon: <FiBookmark /> },
+    { id: 'users', label: 'User Management', icon: <FiUsers /> },
     { id: 'edit-songs', label: 'Edit Songs', icon: <FiEdit3 /> },
-    { id: 'search', label: 'Search & Sort', icon: <FiSearch /> },
     { id: 'queue', label: 'Playback Queue', icon: <FiList /> },
-    { id: 'structures', label: 'Data Structures', icon: <FiLayers /> },
+    { id: 'structures', label: 'Recently Deleted', icon: <FiTrash2 /> },
     { id: 'trees', label: 'Tree Visualizer', icon: <TbHierarchy2 /> },
     { id: 'graph', label: 'Genre Graph', icon: <FiGitBranch /> },
   ]
+
+  const navItems = user?.role === 'admin'
+    ? allNavItems
+    : allNavItems.filter((item) => item.id === 'library' || item.id === 'your-library')
 
   return (
     <aside className={`sidebar ${isOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
@@ -57,7 +80,9 @@ export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect,
       </div>
 
       {/* Navigation Links */}
-      <div className="nav-label">NAVIGATION</div>
+      <div className="nav-label">
+        NAVIGATION ({user ? (user.role === 'admin' ? 'ADMIN' : 'USER') : 'GUEST'})
+      </div>
       <nav className="nav">
         {navItems.map((item) => (
           <button
@@ -100,13 +125,15 @@ export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect,
                 <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {user.username}
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--accent-2)' }}>Logged In</div>
+                <div style={{ fontSize: '10px', color: user?.role === 'admin' ? '#c084fc' : '#60a5fa', fontWeight: 700 }}>
+                  {user?.role === 'admin' ? 'ADMIN ACCESS' : 'USER ACCESS'}
+                </div>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={logout}
+              onClick={() => setShowLogoutModal(true)}
               title="Logout"
               style={{
                 background: 'transparent',
@@ -168,6 +195,77 @@ export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect,
           http://localhost:8080/api
         </div>
       </div>
+
+      {/* Logout Confirmation Modal (Centered globally via Portal) */}
+      {showLogoutModal && createPortal(
+        <div
+          className="modal-backdrop-animate"
+          onClick={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '16px'
+          }}
+        >
+          <div
+            className="modal-animate-pop"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '380px',
+              background: 'linear-gradient(145deg, #1d1133, #110822)',
+              border: '1px solid rgba(168, 85, 247, 0.45)',
+              borderRadius: '20px',
+              padding: '28px 24px',
+              boxShadow: '0 30px 70px rgba(0, 0, 0, 0.95), 0 0 40px rgba(168, 85, 247, 0.3)',
+              textAlign: 'center',
+              animation: 'rise 0.22s ease-out'
+            }}
+          >
+            <div style={{ fontSize: '42px', marginBottom: '12px' }}>🚪</div>
+            <h3 style={{ color: '#fff', fontSize: '19px', margin: '0 0 8px', fontWeight: 800 }}>
+              Confirm Logout
+            </h3>
+            <p style={{ color: 'var(--text-mid)', fontSize: '13px', margin: '0 0 24px', lineHeight: 1.5 }}>
+              Are you sure you want to log out of your session?
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setShowLogoutModal(false)}
+                style={{ justifyContent: 'center', padding: '10px', fontSize: '13px', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setShowLogoutModal(false)
+                  logout()
+                  if (onToast) onToast('Logged out successfully', 'info')
+                }}
+                style={{ justifyContent: 'center', padding: '10px', fontSize: '13px', fontWeight: 700 }}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </aside>
   )
 }

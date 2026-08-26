@@ -72,12 +72,20 @@ export const api = {
   insertSong: (body) => request('/songs', { method: 'POST', body: JSON.stringify(body) }),
   createSong: (body) => request('/songs', { method: 'POST', body: JSON.stringify(body) }),
   updateSong: async (id, body) => {
+    const songId = id || body.id
     try {
-      return await request(`/songs/${id}`, { method: 'PUT', body: JSON.stringify(body) })
-    } catch (_) {
+      return await request(`/songs/${songId}`, { method: 'PUT', body: JSON.stringify(body) })
+    } catch (err) {
       try {
         return await request('/songs', { method: 'PUT', body: JSON.stringify(body) })
-      } catch (__) {
+      } catch (_) {
+        // Fallback for backends without PUT endpoint:
+        // Delete the existing song first so ID collision does not occur, then re-insert updated data
+        try {
+          await request(`/songs/${songId}`, { method: 'DELETE' })
+        } catch (delErr) {
+          console.warn('Could not delete old song during update fallback:', delErr)
+        }
         return await request('/songs', { method: 'POST', body: JSON.stringify(body) })
       }
     }
@@ -85,15 +93,52 @@ export const api = {
   deleteSong: (id) => request(`/songs/${id}`, { method: 'DELETE' }),
 
   // Search
-  searchLinear: (title) => request(`/search/linear?title=${encodeURIComponent(title)}`),
-  searchBinary: (title) => request(`/search/binary?title=${encodeURIComponent(title)}`),
+  searchLinearTitle: async (title) => {
+    try {
+      return await request(`/songs/search/title?title=${encodeURIComponent(title)}`)
+    } catch (_) {
+      return await request(`/search/linear?title=${encodeURIComponent(title)}`)
+    }
+  },
+  searchLinearId: async (id) => {
+    try {
+      return await request(`/songs/search/id/${encodeURIComponent(id)}`)
+    } catch (_) {
+      return await request(`/songs/${encodeURIComponent(id)}`)
+    }
+  },
+  searchHashId: async (id) => {
+    try {
+      return await request(`/songs/search/hash/${encodeURIComponent(id)}`)
+    } catch (_) {
+      return await request(`/structures/hashtable/get/${encodeURIComponent(id)}`)
+    }
+  },
+  searchBstTitle: async (title) => {
+    try {
+      return await request(`/songs/search/bst?title=${encodeURIComponent(title)}`)
+    } catch (_) {
+      return await request(`/trees/bst/search?title=${encodeURIComponent(title)}`)
+    }
+  },
+  searchArtist: async (artist) => {
+    return await request(`/songs/search/artist?artist=${encodeURIComponent(artist)}`)
+  },
+  searchGenre: async (genre) => {
+    return await request(`/songs/search/genre?genre=${encodeURIComponent(genre)}`)
+  },
+  searchLinear: (title) => request(`/songs/search/title?title=${encodeURIComponent(title)}`),
+  searchBinary: (title) => request(`/songs/search/bst?title=${encodeURIComponent(title)}`),
 
   // Sort
-  bubbleSort: (order = 'asc') => request(`/sort/bubble?order=${order}`),
-  selectionSort: (order = 'asc') => request(`/sort/selection?order=${order}`),
-  insertionSort: (order = 'asc') => request(`/sort/insertion?order=${order}`),
-  mergeSort: (order = 'asc') => request(`/sort/merge?order=${order}`),
-  quickSort: (order = 'asc') => request(`/sort/quick?order=${order}`),
+  sortBackend: async (type) => {
+    return await request(`/songs/sort/${type.toLowerCase()}`)
+  },
+  bubbleSort: (order = 'asc') => request('/songs/sort/bubble'),
+  selectionSort: (order = 'asc') => request('/songs/sort/selection'),
+  insertionSort: (order = 'asc') => request('/songs/sort/insertion'),
+  mergeSort: (order = 'asc') => request('/songs/sort/merge'),
+  quickSort: (order = 'asc') => request('/songs/sort/quick'),
 
   // Playback Queue
   getQueue: () => request('/queue'),

@@ -149,11 +149,72 @@ body {
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field label { font-size: 11px; color: var(--text-dim); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.5px; }
-.field input, .field select {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px;
-  padding: 9px 11px; color: var(--text); font-family: var(--inter); font-size: 13.5px; outline: none;
+/* ✨ Universal Sleek Dark Modern Input Styling */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+select,
+textarea,
+.field input,
+.field select,
+.form-input-modern {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(168, 85, 247, 0.28) !important;
+  border-radius: 12px !important;
+  padding: 11px 14px;
+  color: #ffffff !important;
+  font-family: var(--inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 13.5px !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
-.field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(168,85,247,0.14); }
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+select:focus,
+textarea:focus,
+.field input:focus,
+.field select:focus,
+.form-input-modern:focus {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: #c084fc !important;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.28), 0 0 20px rgba(168, 85, 247, 0.25) !important;
+}
+
+input[type="text"]:hover,
+input[type="number"]:hover,
+input[type="email"]:hover,
+input[type="password"]:hover,
+input[type="search"]:hover,
+select:hover,
+textarea:hover,
+.form-input-modern:hover {
+  border-color: rgba(168, 85, 247, 0.45) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+  font-size: 13px !important;
+}
+
+/* Chrome/Safari/Edge autofill override */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #180d2c inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -1546,4 +1607,488 @@ html, body {
     padding: 14px !important;
     border-radius: 12px !important;
   }
+}
+
+/* ==========================================================================
+   ✨ 6. HIGH-PERFORMANCE SMOOTH ANIMATIONS & TRANSITIONS
+   ========================================================================== */
+
+/* 🌟 Smooth Page/Tab Switch Keyframes — Big, Visible Slide + Fade */
+@keyframes pageSwitchFade {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.97);
+    filter: blur(3px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.main-page-transition {
+  animation: pageSwitchFade 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity, filter;
+  width: 100%;
+}
+
+/* 🔮 Smooth Modal Backdrop Keyframes */
+@keyframes backdropFadeIn {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* 🔮 Smooth Modal Pop Up Keyframes — Spring Bounce */
+@keyframes modalPopUp {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) scale(0.82);
+    filter: blur(4px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-8px) scale(1.035);
+    filter: blur(0px);
+  }
+  75% {
+    transform: translateY(3px) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.modal-backdrop-animate {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+  background: rgba(5, 2, 10, 0.88) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  animation: backdropFadeIn 0.3s ease-out forwards;
+}
+
+/* 🧊 Completely freeze background and disable scrolling when any modal is open */
+body.modal-active-freeze,
+html.modal-active-freeze {
+  overflow: hidden !important;
+  height: 100vh !important;
+  touch-action: none !important;
+}
+
+body.modal-active-freeze .main {
+  overflow: hidden !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+body.modal-active-freeze .sidebar,
+body.modal-active-freeze .sidebar-toggle-btn,
+body.modal-active-freeze .now-playing {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.modal-animate-pop {
+  animation: modalPopUp 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  will-change: transform, opacity, filter;
+  pointer-events: auto !important;
+}
+
+/* 🚀 Login / Logout Splash Transition Keyframes — Dramatic Pulse */
+@keyframes authSplashIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+    filter: blur(12px);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.06);
+    filter: blur(0px);
+  }
+  65% {
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+}
+
+@keyframes authSplashOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+    filter: blur(12px);
+  }
+}
+
+@keyframes authSplashPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+    filter: blur(10px);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.04);
+    filter: blur(0px);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(0.98);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+    filter: blur(14px);
+  }
+}
+
+.auth-splash-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, #3b0f6e 0%, #1a0535 40%, #05020a 100%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: authSplashPulse 1.0s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+}
+
+/* 🎯 Sidebar Nav Item Hover Slide */
+.nav-item {
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease !important;
+}
+.nav-item:hover {
+  transform: translateX(3px) !important;
+}
+.nav-item.active {
+  transform: translateX(4px) !important;
+}
+
+/* 🎵 Song Card Hover Lift */
+.spotify-card {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease !important;
+}
+.spotify-card:hover {
+  transform: translateY(-6px) scale(1.025) !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), 0 0 30px rgba(168, 85, 247, 0.18) !important;
+}
+
+/* ========================================================= */
+/* 🎧 RIGHT-SIDE QUEUE SIDEBAR (SPOTIFY-STYLE DRAWER)        */
+/* ========================================================= */
+.queue-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 80px; /* Above now-playing bottom bar */
+  width: 380px;
+  max-width: 90vw;
+  background: linear-gradient(180deg, rgba(19, 10, 36, 0.98), rgba(11, 5, 23, 0.98));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid rgba(168, 85, 247, 0.28);
+  box-shadow: -8px 0 35px rgba(0, 0, 0, 0.7);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.34s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.queue-sidebar.queue-sidebar-open {
+  transform: translateX(0);
+}
+
+.queue-sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .queue-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    bottom: 80px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1040;
+    animation: backdropFadeIn 0.25s ease-out;
+  }
+}
+
+.queue-sidebar-header {
+  padding: 20px 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.queue-close-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.queue-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fff;
+  transform: scale(1.05);
+}
+
+/* Actions toolbar (Play All & Clear Queue) */
+.queue-sidebar-actions {
+  padding: 14px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.btn-queue-action {
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-queue-action.play-all {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.35);
+}
+
+.btn-queue-action.play-all:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
+}
+
+.btn-queue-action.clear-all {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-mid);
+}
+
+.btn-queue-action.clear-all:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.btn-queue-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Scrollable body */
+.queue-sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.queue-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 10px;
+  font-family: var(--mono);
+}
+
+/* Queue Song Card */
+.queue-song-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.queue-song-card:hover {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.25);
+  transform: translateX(2px);
+}
+
+.queue-song-card.is-active-playing {
+  background: rgba(168, 85, 247, 0.18);
+  border-color: var(--accent);
+}
+
+.queue-song-card.now-playing-card {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(236, 72, 153, 0.12));
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.card-play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.queue-song-card:hover .card-play-overlay {
+  opacity: 1;
+}
+
+.queue-track-number {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-dim);
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.queue-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-card-title.current-title {
+  color: #c084fc;
+}
+
+.queue-card-artist {
+  font-size: 11.5px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* Remove button */
+.btn-queue-remove-song {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-queue-remove-song:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Equalizer sound wave animation */
+.now-playing-wave-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 16px;
+  padding-right: 4px;
+}
+
+.wave-bar {
+  width: 3px;
+  background: #c084fc;
+  border-radius: 3px;
+  animation: wavePulse 0.8s ease-in-out infinite alternate;
+}
+
+.wave-bar:nth-child(1) { height: 14px; animation-delay: 0.1s; }
+.wave-bar:nth-child(2) { height: 8px; animation-delay: 0.3s; }
+.wave-bar:nth-child(3) { height: 16px; animation-delay: 0.2s; }
+
+@keyframes wavePulse {
+  0% { height: 4px; }
+  100% { height: 16px; }
+}
+
+.queue-sidebar-empty {
+  text-align: center;
+  padding: 40px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
 }

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../api'
 import CoverArt from './CoverArt'
 import { usePlayer } from './PlayerContext'
-import { FiPlus, FiCheck, FiSearch } from 'react-icons/fi'
+import { useAuth } from './AuthContext'
+import { FiPlus, FiCheck, FiSearch, FiZap, FiRotateCcw, FiCpu, FiLayers } from 'react-icons/fi'
 import { FaPlay, FaPause } from 'react-icons/fa'
 import { RiPlayList2Line } from 'react-icons/ri'
 
@@ -136,18 +138,41 @@ function CustomDropdown({ label, options, value, onChange, placeholder = 'Select
 
 export default function Library({ songs = [], onRefresh, onToast, onSelectSong, selectedSong, userLibraryIds = [], onToggleUserLibrary, queuedSongIds = [], onToggleQueue }) {
   const { play, currentSong, isPlaying } = usePlayer()
+  const { user, isAdmin } = useAuth()
 
-  // State
+  // Filter & Search State
   const [filterGenre, setFilterGenre] = useState('ALL')
   const [filterLanguage, setFilterLanguage] = useState('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [backendSearchMeta, setBackendSearchMeta] = useState(null)
+  const [isSearching, setIsSearching] = useState(false)
+
+  // Sort State
   const [sortOrder, setSortOrder] = useState('none')
+  const [backendSortList, setBackendSortList] = useState(null)
+  const [backendSortMeta, setBackendSortMeta] = useState(null)
+  const [isSorting, setIsSorting] = useState(false)
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false)
   const [songToDelete, setSongToDelete] = useState(null)
   const [loading, setLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // 🧊 Freeze background and prevent scroll when any modal is open
+  useEffect(() => {
+    if (showAddModal || songToDelete) {
+      document.body.classList.add('modal-active-freeze')
+      document.documentElement.classList.add('modal-active-freeze')
+    } else {
+      document.body.classList.remove('modal-active-freeze')
+      document.documentElement.classList.remove('modal-active-freeze')
+    }
+    return () => {
+      document.body.classList.remove('modal-active-freeze')
+      document.documentElement.classList.remove('modal-active-freeze')
+    }
+  }, [showAddModal, songToDelete])
 
   // Local metadata storage map for persistent cover, duration & language
   const [metaMap, setMetaMap] = useState(() => {
@@ -179,40 +204,222 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
 
   const genreOptions = genres.map((g) => ({ value: g, label: g }))
   const languageOptions = languages.map((l) => ({ value: l, label: l }))
+
   const sortOptions = [
     { value: 'none', label: 'Default Order' },
+    { value: 'quick', label: '⚡ Quick Sort (Backend DS)' },
+    { value: 'merge', label: '🔀 Merge Sort (Backend DS)' },
+    { value: 'bubble', label: '🫧 Bubble Sort (Backend DS)' },
+    { value: 'selection', label: '🎯 Selection Sort (Backend DS)' },
+    { value: 'insertion', label: '📥 Insertion Sort (Backend DS)' },
     { value: 'asc', label: 'Title (A - Z)' },
     { value: 'desc', label: 'Title (Z - A)' },
     { value: 'duration-asc', label: 'Duration (Shortest)' },
     { value: 'duration-desc', label: 'Duration (Longest)' }
   ]
 
-  // Fetch initial queue state from API & merge with local storage
-  const refreshQueueState = async () => {
-    try {
-      const qData = await api.getQueue()
-      let qList = []
-      if (Array.isArray(qData)) qList = qData
-      else if (qData && Array.isArray(qData.songs)) qList = qData.songs
-      else if (qData && Array.isArray(qData.queue)) qList = qData.queue
+  // 🧠 Intelligent Algorithm Classifier: Automatically determines optimal DS algorithm based on query
+  const detectedAlgorithm = useMemo(() => {
+    const q = searchQuery.trim()
+    if (!q) return null
 
-      if (qList.length > 0) {
-        setQueuedSongIds((prev) => {
-          const merged = new Set([...Array.from(prev), ...qList.map((s) => String(s.id || s.songId))])
-          localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(merged)))
-          return merged
-        })
+    // 1. Pure Numeric ID Query -> Route to Hash Table Search O(1)
+    const numMatch = q.match(/^#?(\d+)$/)
+    if (numMatch) {
+      return {
+        type: 'id-hash',
+        name: 'Hash Table Search',
+        complexity: 'O(1)',
+        icon: '⚡',
+        id: parseInt(numMatch[1], 10),
+        label: 'Hash Table Search O(1)'
       }
-    } catch (_) {}
+    }
+
+    const lowerQ = q.toLowerCase()
+
+    // 2. Matches known Genre -> Route to Genre Search Engine
+    const isGenre = genres.some((g) => g !== 'ALL' && g.toLowerCase() === lowerQ) ||
+      ['pop', 'rock', 'hip hop', 'hip-hop', 'r&b', 'synthwave', 'classical', 'jazz', 'electronic', 'country', 'metal', 'dance'].includes(lowerQ)
+    if (isGenre) {
+      return {
+        type: 'genre-ds',
+        name: 'Genre Search Engine',
+        complexity: 'Hash Set',
+        icon: '🏷️',
+        genre: q,
+        label: 'Genre Search Engine'
+      }
+    }
+
+    // 3. Matches known Artist -> Route to Artist Search Engine
+    const isArtist = safeSongs.some((s) => s.artist && s.artist.toLowerCase().includes(lowerQ))
+    if (isArtist) {
+      return {
+        type: 'artist-ds',
+        name: 'Artist Search Engine',
+        complexity: 'Linked Index',
+        icon: '🎤',
+        artist: q,
+        label: 'Artist Search Engine'
+      }
+    }
+
+    // 4. Song Title / Text -> Route to Binary Search Tree (BST) O(log n)
+    return {
+      type: 'title-bst',
+      name: 'BST Tree Search',
+      complexity: 'O(log n)',
+      icon: '🌳',
+      title: q,
+      label: 'BST Tree Search O(log n)'
+    }
+  }, [searchQuery, genres, safeSongs])
+
+  // Automatically execute backend DS search in background when query changes (Debounced)
+  useEffect(() => {
+    if (!searchQuery.trim() || !detectedAlgorithm) {
+      setBackendSearchMeta(null)
+      return
+    }
+
+    setIsSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        if (detectedAlgorithm.type === 'id-hash') {
+          await api.searchHashId(detectedAlgorithm.id)
+        } else if (detectedAlgorithm.type === 'genre-ds') {
+          await api.searchGenre(detectedAlgorithm.genre)
+        } else if (detectedAlgorithm.type === 'artist-ds') {
+          await api.searchArtist(detectedAlgorithm.artist)
+        } else if (detectedAlgorithm.type === 'title-bst') {
+          await api.searchBstTitle(detectedAlgorithm.title)
+        }
+
+        setBackendSearchMeta({
+          type: `${detectedAlgorithm.icon} ${detectedAlgorithm.name} (${detectedAlgorithm.complexity})`,
+          query: searchQuery.trim()
+        })
+      } catch (err) {
+        setBackendSearchMeta({
+          type: `${detectedAlgorithm.icon} ${detectedAlgorithm.name} (Auto-Routed)`,
+          query: searchQuery.trim()
+        })
+      } finally {
+        setIsSearching(false)
+      }
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery, detectedAlgorithm])
+
+  // Handle Sort Change (Backend DS or Client)
+  const handleSortChange = async (newSort) => {
+    setSortOrder(newSort)
+
+    const backendSortTypes = {
+      quick: 'Quick Sort (O(n log n))',
+      merge: 'Merge Sort (O(n log n))',
+      bubble: 'Bubble Sort (O(n²))',
+      selection: 'Selection Sort (O(n²))',
+      insertion: 'Insertion Sort (O(n²))'
+    }
+
+    if (backendSortTypes[newSort]) {
+      setIsSorting(true)
+      try {
+        const sortedData = await api.sortBackend(newSort)
+        let list = []
+        if (Array.isArray(sortedData)) list = sortedData
+        else if (sortedData && Array.isArray(sortedData.songs)) list = sortedData.songs
+
+        if (list.length > 0) {
+          const formattedList = list.map((s) => {
+            const id = String(s.id)
+            const meta = metaMap[id] || {}
+            return {
+              ...s,
+              language: s.language || s.lang || meta.language || 'English',
+              coverUrl: s.coverUrl || s.cover_url || s.cover || s.imageUrl || meta.coverUrl || null,
+              durationSeconds: s.durationSeconds || s.duration || s.duration_seconds || meta.durationSeconds || 180,
+              audioUrl: s.audioUrl || s.audio_url || meta.audioUrl || null
+            }
+          })
+          setBackendSortList(formattedList)
+          setBackendSortMeta(backendSortTypes[newSort])
+          if (onToast) onToast(`Library sorted via ${backendSortTypes[newSort]} (Backend DS)!`, 'ok')
+        } else {
+          applyLocalAlgorithmSort(newSort, backendSortTypes[newSort])
+        }
+      } catch (err) {
+        console.warn('Backend sort error, applying local algorithm:', err)
+        applyLocalAlgorithmSort(newSort, backendSortTypes[newSort])
+      } finally {
+        setIsSorting(false)
+      }
+    } else {
+      setBackendSortList(null)
+      setBackendSortMeta(null)
+    }
   }
 
-  useEffect(() => {
-    refreshQueueState()
-  }, [])
+  // Local fallback implementations of DS sorting algorithms
+  const applyLocalAlgorithmSort = (algo, label) => {
+    let copy = [...safeSongs]
+    if (algo === 'bubble') {
+      for (let i = 0; i < copy.length - 1; i++) {
+        for (let j = 0; j < copy.length - i - 1; j++) {
+          if ((copy[j].title || '').localeCompare(copy[j + 1].title || '') > 0) {
+            const temp = copy[j]
+            copy[j] = copy[j + 1]
+            copy[j + 1] = temp
+          }
+        }
+      }
+    } else if (algo === 'selection') {
+      for (let i = 0; i < copy.length - 1; i++) {
+        let minIdx = i
+        for (let j = i + 1; j < copy.length; j++) {
+          if ((copy[j].title || '').localeCompare(copy[minIdx].title || '') < 0) {
+            minIdx = j
+          }
+        }
+        const temp = copy[i]
+        copy[i] = copy[minIdx]
+        copy[minIdx] = temp
+      }
+    } else if (algo === 'insertion') {
+      for (let i = 1; i < copy.length; i++) {
+        let key = copy[i]
+        let j = i - 1
+        while (j >= 0 && (copy[j].title || '').localeCompare(key.title || '') > 0) {
+          copy[j + 1] = copy[j]
+          j = j - 1
+        }
+        copy[j + 1] = key
+      }
+    } else {
+      copy.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+    }
+    setBackendSortList(copy)
+    setBackendSortMeta(label)
+    if (onToast) onToast(`Library sorted via ${label}!`, 'ok')
+  }
 
-  // Filter & Sort Pipeline
+  // Reset all search & sort
+  const handleResetSearch = () => {
+    setSearchQuery('')
+    setBackendSearchMeta(null)
+    setFilterGenre('ALL')
+    setFilterLanguage('ALL')
+    setSortOrder('none')
+    setBackendSortList(null)
+    setBackendSortMeta(null)
+  }
+
+  // Filter & Sort Pipeline (Reactive & Instant)
   const displayedSongs = useMemo(() => {
-    let list = [...safeSongs]
+    let list = backendSortList ? [...backendSortList] : [...safeSongs]
 
     if (filterGenre !== 'ALL') {
       list = list.filter((s) => s?.genre === filterGenre)
@@ -222,18 +429,28 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       list = list.filter((s) => s?.language === filterLanguage)
     }
 
+    // Instant Responsive Search Filter Across All Fields + Numeric ID
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim()
-      list = list.filter((s) =>
-        (s?.title && s.title.toLowerCase().includes(q)) ||
-        (s?.artist && s.artist.toLowerCase().includes(q)) ||
-        (s?.album && s.album.toLowerCase().includes(q)) ||
-        (s?.genre && s.genre.toLowerCase().includes(q)) ||
-        (s?.language && s.language.toLowerCase().includes(q))
-      )
+      const q = searchQuery.trim().toLowerCase()
+      const isNumeric = /^\d+$/.test(q)
+
+      list = list.filter((s) => {
+        if (isNumeric && (String(s?.id) === q || String(s?.id).startsWith(q))) {
+          return true
+        }
+        return (
+          (s?.title && s.title.toLowerCase().includes(q)) ||
+          (s?.artist && s.artist.toLowerCase().includes(q)) ||
+          (s?.album && s.album.toLowerCase().includes(q)) ||
+          (s?.genre && s.genre.toLowerCase().includes(q)) ||
+          (s?.language && s.language.toLowerCase().includes(q)) ||
+          (String(s?.id) === q)
+        )
+      })
     }
 
-    if (sortOrder !== 'none') {
+    // Client-side sort if chosen and not already sorted via backendSortList
+    if (!backendSortList && sortOrder !== 'none') {
       list.sort((a, b) => {
         if (sortOrder === 'asc') return (a.title || '').localeCompare(b.title || '')
         if (sortOrder === 'desc') return (b.title || '').localeCompare(a.title || '')
@@ -248,39 +465,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     }
 
     return list
-  }, [safeSongs, filterGenre, filterLanguage, searchQuery, sortOrder])
-
-  // Toggle Queue Action
-  const handleToggleQueue = async (song, e) => {
-    if (e && typeof e.stopPropagation === 'function') {
-      e.stopPropagation()
-    }
-
-    const songIdStr = String(song.id)
-    const isCurrentlyQueued = Array.from(queuedSongIds).some((id) => String(id) === songIdStr)
-
-    if (isCurrentlyQueued) {
-      setQueuedSongIds((prev) => {
-        const next = new Set(Array.from(prev).filter((id) => String(id) !== songIdStr))
-        localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(next)))
-        return next
-      })
-      if (onToast) onToast(`"${song.title}" removed from Queue`, 'info')
-      try {
-        await api.dequeue(song.id)
-      } catch (_) {}
-    } else {
-      setQueuedSongIds((prev) => {
-        const next = new Set([...Array.from(prev), songIdStr])
-        localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(next)))
-        return next
-      })
-      if (onToast) onToast(`"${song.title}" added to Queue!`, 'ok')
-      try {
-        await api.enqueue(song)
-      } catch (_) {}
-    }
-  }
+  }, [safeSongs, backendSortList, filterGenre, filterLanguage, searchQuery, sortOrder])
 
   // Request Delete Confirmation Modal
   const requestDelete = (song, e) => {
@@ -307,12 +492,6 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
 
       await api.deleteSong(id)
       if (onToast) onToast(`"${songToDelete.title}" moved to Trash (Stack)`, 'ok')
-
-      setQueuedSongIds((prev) => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
 
       setSongToDelete(null)
       if (typeof onRefresh === 'function') await onRefresh()
@@ -421,31 +600,107 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
           </p>
         </div>
 
-        <button type="button" className="btn btn-primary" onClick={openModal}>
-          <FiPlus style={{ fontSize: '15px' }} /> Add Song
-        </button>
+        {(isAdmin || user?.role === 'admin') && (
+          <button type="button" className="btn btn-primary" onClick={openModal}>
+            <FiPlus style={{ fontSize: '15px' }} /> Add Song
+          </button>
+        )}
       </div>
 
-      {/* Toolbar Filter Panel */}
-      <div className="panel lib-toolbar-panel">
-        <div className="lib-toolbar-layout">
-          <div className="field search-box">
-            <label>Search Query</label>
+      {/* Active Backend Search / Sort Status Banner (Subtle & Informative) */}
+      {(backendSearchMeta || backendSortMeta) && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '9px 16px',
+            borderRadius: '12px',
+            marginBottom: '16px',
+            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(59, 130, 246, 0.08))',
+            border: '1px solid rgba(168, 85, 247, 0.28)',
+            fontSize: '12.5px',
+            color: '#fff',
+            flexWrap: 'wrap',
+            gap: '10px',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {backendSearchMeta && (
+              <span style={{ fontWeight: 600, color: 'var(--accent-2)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '14px' }}>⚡</span> Smart DS Engine: {backendSearchMeta.type} &bull; Query: "{backendSearchMeta.query}"
+              </span>
+            )}
+            {backendSortMeta && (
+              <span style={{ fontWeight: 600, color: '#38bdf8' }}>
+                Sorted with: {backendSortMeta}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={handleResetSearch}
+            style={{ padding: '4px 10px', fontSize: '11.5px', background: 'rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '5px' }}
+          >
+            <FiRotateCcw /> Reset / View All
+          </button>
+        </div>
+      )}
+
+      {/* Modern Unified Toolbar Filter Panel */}
+      <div className="panel lib-toolbar-panel" style={{ padding: '16px 20px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          
+          {/* Unified Intelligent Search Bar */}
+          <div className="field search-box" style={{ margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label style={{ margin: 0, fontWeight: 600, fontSize: '11px', letterSpacing: '0.05em' }}>
+                SEARCH MUSIC LIBRARY
+              </label>
+              {detectedAlgorithm && searchQuery.trim() && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: 'var(--accent-2)',
+                    background: 'rgba(168, 85, 247, 0.15)',
+                    padding: '2px 10px',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(168, 85, 247, 0.35)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <span>{detectedAlgorithm.icon}</span> Auto Engine: {detectedAlgorithm.label}
+                </span>
+              )}
+            </div>
+
             <div style={{ position: 'relative', width: '100%' }}>
               <input
                 type="text"
-                placeholder="Search by title, artist, album..."
+                placeholder="Search by song name, artist, album, genre, or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ paddingLeft: '32px', width: '100%' }}
+                style={{
+                  paddingLeft: '38px',
+                  paddingRight: searchQuery ? '36px' : '14px',
+                  width: '100%',
+                  height: '44px',
+                  fontSize: '14px',
+                  borderRadius: '12px'
+                }}
               />
               <span
                 style={{
                   position: 'absolute',
-                  left: '10px',
+                  left: '12px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  fontSize: '13px',
+                  fontSize: '15px',
                   display: 'flex',
                   alignItems: 'center',
                   opacity: 0.6
@@ -453,10 +708,35 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
               >
                 <FiSearch />
               </span>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setBackendSearchMeta(null)
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-dim)',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    padding: 0
+                  }}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="filter-sort-group">
+          {/* Bottom Filters & Sorting Algorithms */}
+          <div className="filter-sort-group" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', width: '100%' }}>
             <div className="filter-box">
               <CustomDropdown
                 label="FILTER GENRE"
@@ -477,13 +757,14 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
 
             <div className="sort-box">
               <CustomDropdown
-                label="SORT BY"
+                label="SORT BY (ALGORITHMS & ORDER)"
                 options={sortOptions}
                 value={sortOrder}
-                onChange={setSortOrder}
+                onChange={handleSortChange}
               />
             </div>
           </div>
+
         </div>
       </div>
 
@@ -569,27 +850,42 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       {displayedSongs.length === 0 && (
         <div className="panel empty" style={{ padding: '40px 20px', textAlign: 'center' }}>
           <div style={{ fontSize: '36px', marginBottom: '10px' }}>🔍</div>
-          <p style={{ color: 'var(--text-mid)', fontSize: '14px' }}>No songs found in your library</p>
+          <p style={{ color: 'var(--text-mid)', fontSize: '14px', marginBottom: '16px' }}>No songs found matching your search or filters</p>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={handleResetSearch}
+            style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <FiRotateCcw /> Reset Search & View All
+          </button>
         </div>
       )}
 
       {/* Delete Confirmation Modal */}
-      {songToDelete && (
+      {songToDelete && createPortal(
         <div
+          className="modal-backdrop-animate"
+          onClick={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
-            inset: 0,
-            background: 'rgba(5, 2, 10, 0.85)',
-            backdropFilter: 'blur(10px)',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000,
+            zIndex: 99999,
             padding: '16px'
           }}
-          onClick={() => !deleteLoading && setSongToDelete(null)}
         >
           <div
+            className="modal-animate-pop"
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%',
@@ -668,33 +964,43 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add Song Modal */}
       {/* ========================================================= */}
       {/* 🟣 COMPACT SLEEK ADD SONG MODAL */}
       {/* ========================================================= */}
-      {showAddModal && (
+      {showAddModal && createPortal(
         <div
+          className="modal-backdrop-animate"
+          onClick={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
-            inset: 0,
-            background: 'rgba(5, 2, 10, 0.85)',
-            backdropFilter: 'blur(10px)',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1100,
+            zIndex: 99999,
             padding: '16px'
           }}
-          onClick={() => !loading && setShowAddModal(false)}
         >
           <div
+            className="modal-animate-pop"
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%',
               maxWidth: '500px',
+              maxHeight: '92vh',
+              overflowY: 'auto',
               boxSizing: 'border-box',
               background: 'linear-gradient(145deg, #190e30, #110822)',
               border: '1px solid rgba(168, 85, 247, 0.45)',
@@ -702,8 +1008,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
               padding: '24px',
               boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(168, 85, 247, 0.25)',
               animation: 'rise 0.22s ease-out',
-              position: 'relative',
-              overflow: 'hidden'
+              position: 'relative'
             }}
           >
             {/* Modal Header */}
@@ -879,7 +1184,8 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

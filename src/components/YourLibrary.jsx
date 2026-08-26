@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import CoverArt from './CoverArt'
 import { usePlayer } from './PlayerContext'
+import { useAuth } from './AuthContext'
 import { api } from '../api'
 import { FiCheck, FiSearch, FiBookmark } from 'react-icons/fi'
 import { FaPlay, FaPause } from 'react-icons/fa'
@@ -8,6 +9,7 @@ import { RiPlayList2Line } from 'react-icons/ri'
 
 export default function YourLibrary({ songs = [], userLibraryIds = [], onToggleUserLibrary, queuedSongIds = [], onToggleQueue, onToast, onSelectSong }) {
   const { play, currentSong, isPlaying } = usePlayer()
+  const { user, setAuthModalOpen } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
 
   // Local metadata storage cache fallback
@@ -51,61 +53,6 @@ export default function YourLibrary({ songs = [], userLibraryIds = [], onToggleU
         (s?.genre && s.genre.toLowerCase().includes(q))
     )
   }, [savedSongs, searchQuery])
-
-  // Fetch initial queue state
-  const refreshQueueState = async () => {
-    try {
-      const qData = await api.getQueue()
-      let qList = []
-      if (Array.isArray(qData)) qList = qData
-      else if (qData && Array.isArray(qData.songs)) qList = qData.songs
-      else if (qData && Array.isArray(qData.queue)) qList = qData.queue
-
-      if (qList.length > 0) {
-        setQueuedSongIds((prev) => {
-          const merged = new Set([...Array.from(prev), ...qList.map((s) => String(s.id || s.songId))])
-          localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(merged)))
-          return merged
-        })
-      }
-    } catch (_) {}
-  }
-
-  useEffect(() => {
-    refreshQueueState()
-  }, [])
-
-  // Toggle Queue Action
-  const handleToggleQueue = async (song, e) => {
-    if (e && typeof e.stopPropagation === 'function') {
-      e.stopPropagation()
-    }
-
-    const songIdStr = String(song.id)
-    const isCurrentlyQueued = Array.from(queuedSongIds).some((id) => String(id) === songIdStr)
-
-    if (isCurrentlyQueued) {
-      setQueuedSongIds((prev) => {
-        const next = new Set(Array.from(prev).filter((id) => String(id) !== songIdStr))
-        localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(next)))
-        return next
-      })
-      if (onToast) onToast(`"${song.title}" removed from Queue`, 'info')
-      try {
-        await api.dequeue(song.id)
-      } catch (_) {}
-    } else {
-      setQueuedSongIds((prev) => {
-        const next = new Set([...Array.from(prev), songIdStr])
-        localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(next)))
-        return next
-      })
-      if (onToast) onToast(`"${song.title}" added to Queue!`, 'ok')
-      try {
-        await api.enqueue(song)
-      } catch (_) {}
-    }
-  }
 
   return (
     <div style={{ width: '100%', maxWidth: '100%' }}>
@@ -238,9 +185,21 @@ export default function YourLibrary({ songs = [], userLibraryIds = [], onToggleU
           <h3 style={{ color: '#fff', fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
             Your Library is Empty
           </h3>
-          <p style={{ color: 'var(--text-mid)', fontSize: '14px', maxWidth: '420px', margin: '0 auto' }}>
-            Browse through the <strong>Music Library</strong> and click the <strong>"+"</strong> button on any song card to save your favorite songs here!
+          <p style={{ color: 'var(--text-mid)', fontSize: '14px', maxWidth: '420px', margin: '0 auto 16px' }}>
+            {!user
+              ? 'Log in to your account to save your favorite songs and access your personal collection!'
+              : 'Browse through the Music Library and click the "+" button on any song card to save your favorite songs here!'}
           </p>
+          {!user && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setAuthModalOpen(true)}
+              style={{ margin: '0 auto' }}
+            >
+              Log In / Sign Up
+            </button>
+          )}
         </div>
       )}
     </div>

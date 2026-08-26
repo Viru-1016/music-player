@@ -3,6 +3,7 @@ import { usePlayer } from './PlayerContext'
 import CoverArt from './CoverArt'
 import { FaPlay, FaPause, FaStepBackward, FaStepForward } from 'react-icons/fa'
 import { FiVolumeX, FiVolume1, FiVolume2 } from 'react-icons/fi'
+import { RiPlayList2Line } from 'react-icons/ri'
 
 export default function NowPlayingBar() {
   const {
@@ -16,6 +17,9 @@ export default function NowPlayingBar() {
     prev,
     seek,
     changeVolume,
+    queue,
+    isQueueOpen,
+    toggleQueueSidebar
   } = usePlayer()
 
   const [showMobileVolume, setShowMobileVolume] = useState(false)
@@ -53,7 +57,10 @@ export default function NowPlayingBar() {
       {/* Left: Track Info */}
       <div className="np-track">
         <div className="cover" style={{ width: '42px', height: '42px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
-          <CoverArt url={currentSong?.coverUrl} title={currentSong?.title} />
+          <CoverArt
+            url={currentSong?.coverUrl || currentSong?.cover_url || currentSong?.cover || currentSong?.imageUrl}
+            title={currentSong?.title}
+          />
         </div>
         <div className="np-info">
           <div className="np-title">{currentSong ? currentSong.title : 'Nothing playing'}</div>
@@ -108,8 +115,52 @@ export default function NowPlayingBar() {
         </div>
       </div>
 
-      {/* Right: Volume Controller with Mobile Popover */}
-      <div className="np-volume" ref={volPopupRef}>
+      {/* Right: Queue Toggle & Volume Controller */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button
+          type="button"
+          onClick={toggleQueueSidebar}
+          className={`vol-btn-trigger ${isQueueOpen ? 'active-queue' : ''}`}
+          title={isQueueOpen ? 'Close Queue' : 'Open Playback Queue'}
+          style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '36px',
+            height: '36px',
+            color: isQueueOpen ? '#c084fc' : 'var(--text-mid)',
+            background: isQueueOpen ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+            borderRadius: '8px',
+            border: isQueueOpen ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
+            transition: 'all 0.2s ease',
+            cursor: 'pointer'
+          }}
+        >
+          <RiPlayList2Line style={{ fontSize: '18px' }} />
+          {queue.length > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+                color: '#fff',
+                fontSize: '10px',
+                fontWeight: 800,
+                borderRadius: '10px',
+                padding: '1px 5px',
+                minWidth: '14px',
+                textAlign: 'center',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.6)'
+              }}
+            >
+              {queue.length}
+            </span>
+          )}
+        </button>
+
+        <div className="np-volume" ref={volPopupRef}>
         <button
           type="button"
           onClick={() => setShowMobileVolume((prev) => !prev)}
@@ -139,5 +190,6 @@ export default function NowPlayingBar() {
         </div>
       </div>
     </div>
+  </div>
   )
 }
