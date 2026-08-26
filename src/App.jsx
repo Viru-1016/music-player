@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Library from './components/Library'
+import YourLibrary from './components/YourLibrary'
+import EditSongs from './components/EditSongs'
 import SearchSort from './components/SearchSort'
 import Queue from './components/Queue'
 import Structures from './components/Structures'
 import Trees from './components/Trees'
 import Graph from './components/Graph'
-import * as ToastModule from './components/Toast'
+import { ToastContainer } from './components/Toast'
 import NowPlayingBar from './components/NowPlayingBar'
 import { PlayerProvider, usePlayer } from './components/PlayerContext'
 import { AuthProvider } from './components/AuthContext'
@@ -18,7 +20,64 @@ function AppContent() {
   const [songs, setSongs] = useState([])
   const [toasts, setToasts] = useState([])
   const [selectedSong, setSelectedSong] = useState(null)
-  
+
+  // User Saved Library State
+  const [userLibraryIds, setUserLibraryIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('resonance_user_library') || '[]')
+    } catch (_) {
+      return []
+    }
+  })
+
+  // Global Playback Queue State
+  const [queuedSongIds, setQueuedSongIds] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('resonance_playback_queue') || '[]')
+      return stored.map((id) => String(id))
+    } catch (_) {
+      return []
+    }
+  })
+
+  const toggleUserLibrary = (song) => {
+    if (!song || song.id === undefined) return
+    const songId = song.id
+    setUserLibraryIds((prev) => {
+      const exists = prev.some((id) => String(id) === String(songId))
+      let next
+      if (exists) {
+        next = prev.filter((id) => String(id) !== String(songId))
+        showToast(`"${song.title || 'Song'}" removed from Your Library`, 'info')
+      } else {
+        next = [...prev, songId]
+        showToast(`"${song.title || 'Song'}" added to Your Library!`, 'ok')
+      }
+      localStorage.setItem('resonance_user_library', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const toggleQueue = (song) => {
+    if (!song || song.id === undefined) return
+    const songIdStr = String(song.id)
+    setQueuedSongIds((prev) => {
+      const exists = prev.some((id) => String(id) === songIdStr)
+      let next
+      if (exists) {
+        next = prev.filter((id) => String(id) !== songIdStr)
+        showToast(`"${song.title || 'Song'}" removed from Queue`, 'info')
+        api.dequeue(song.id).catch(() => {})
+      } else {
+        next = [...prev, songIdStr]
+        showToast(`"${song.title || 'Song'}" added to Queue!`, 'ok')
+        api.enqueue(song).catch(() => {})
+      }
+      localStorage.setItem('resonance_playback_queue', JSON.stringify(next))
+      return next
+    })
+  }
+
   // Sidebar state (Default open on desktop, toggleable anytime)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
@@ -54,8 +113,6 @@ function AppContent() {
   useEffect(() => {
     fetchSongs()
   }, [])
-
-  const ToastComponent = ToastModule.ToastContainer || ToastModule.Toast || ToastModule.default
 
   return (
     <div className={`app ${isSidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
@@ -104,11 +161,43 @@ function AppContent() {
             onToast={showToast}
             onSelectSong={setSelectedSong}
             selectedSong={selectedSong}
+            userLibraryIds={userLibraryIds}
+            onToggleUserLibrary={toggleUserLibrary}
+            queuedSongIds={queuedSongIds}
+            onToggleQueue={toggleQueue}
+          />
+        )}
+
+        {activeTab === 'your-library' && (
+          <YourLibrary
+            songs={songs}
+            userLibraryIds={userLibraryIds}
+            onToggleUserLibrary={toggleUserLibrary}
+            queuedSongIds={queuedSongIds}
+            onToggleQueue={toggleQueue}
+            onToast={showToast}
+            onSelectSong={setSelectedSong}
+          />
+        )}
+
+        {activeTab === 'edit-songs' && (
+          <EditSongs 
+            songs={songs} 
+            onRefresh={fetchSongs} 
+            onToast={showToast} 
           />
         )}
 
         {activeTab === 'search' && <SearchSort songs={songs} onToast={showToast} />}
-        {activeTab === 'queue' && <Queue songs={songs} onToast={showToast} />}
+        {activeTab === 'queue' && (
+          <Queue
+            songs={songs}
+            queuedSongIds={queuedSongIds}
+            onToggleQueue={toggleQueue}
+            setQueuedSongIds={setQueuedSongIds}
+            onToast={showToast}
+          />
+        )}
         {activeTab === 'structures' && (
           <Structures 
             songs={songs} 
@@ -124,7 +213,7 @@ function AppContent() {
 
       <AuthModal onToast={showToast} />
 
-      {ToastComponent && <ToastComponent toasts={toasts} setToasts={setToasts} />}
+      <ToastContainer toasts={toasts} />
     </div>
   )
 }

@@ -1,16 +1,30 @@
 import React from 'react'
 import { useAuth } from './AuthContext'
+import {
+  FiMusic,
+  FiEdit3,
+  FiSearch,
+  FiList,
+  FiLayers,
+  FiGitBranch,
+  FiLogOut,
+  FiBookmark
+} from 'react-icons/fi'
+import { TbHierarchy2 } from 'react-icons/tb'
+import { RiDiscLine } from 'react-icons/ri'
 
 export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect, isOpen, onClose }) {
   const { user, setAuthModalOpen, setAuthMode, logout } = useAuth()
 
   const navItems = [
-    { id: 'library', label: 'Music Library', icon: '🎵' },
-    { id: 'search', label: 'Search & Sort', icon: '⚡' },
-    { id: 'queue', label: 'Playback Queue', icon: '📑' },
-    { id: 'structures', label: 'Data Structures', icon: '📦' },
-    { id: 'trees', label: 'Tree Visualizer', icon: '🌲' },
-    { id: 'graph', label: 'Genre Graph', icon: '🕸️' },
+    { id: 'library', label: 'Music Library', icon: <FiMusic /> },
+    { id: 'your-library', label: 'Your Library', icon: <FiBookmark /> },
+    { id: 'edit-songs', label: 'Edit Songs', icon: <FiEdit3 /> },
+    { id: 'search', label: 'Search & Sort', icon: <FiSearch /> },
+    { id: 'queue', label: 'Playback Queue', icon: <FiList /> },
+    { id: 'structures', label: 'Data Structures', icon: <FiLayers /> },
+    { id: 'trees', label: 'Tree Visualizer', icon: <TbHierarchy2 /> },
+    { id: 'graph', label: 'Genre Graph', icon: <FiGitBranch /> },
   ]
 
   return (
@@ -18,7 +32,9 @@ export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect,
       {/* Brand Header with Close Squircle Icon */}
       <div className="brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div className="logo-box">🎵</div>
+          <div className="logo-box">
+            <RiDiscLine style={{ fontSize: '20px', display: 'block' }} />
+          </div>
           <div>
             <div className="brand-name">Resonance</div>
             <div className="brand-sub">DSA MUSIC HUB</div>
@@ -50,7 +66,9 @@ export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect,
             className={`nav-btn ${activeTab === item.id ? 'active' : ''}`}
             onClick={() => setActiveTab(item.id)}
           >
-            <span className="nav-icon">{item.icon}</span>
+            <span className="nav-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+              {item.icon}
+            </span>
             <span>{item.label}</span>
           </button>
         ))}
@@ -96,10 +114,12 @@ export default function Sidebar({ activeTab, setActiveTab, onToast, onReconnect,
                 color: 'var(--text-dim)',
                 cursor: 'pointer',
                 fontSize: '15px',
-                padding: '4px'
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center'
               }}
             >
-              🚪
+              <FiLogOut />
             </button>
           </div>
         ) : (

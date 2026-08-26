@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { usePlayer } from './PlayerContext'
 import CoverArt from './CoverArt'
+import { FaPlay, FaPause, FaStepBackward, FaStepForward } from 'react-icons/fa'
+import { FiVolumeX, FiVolume1, FiVolume2 } from 'react-icons/fi'
 
 export default function NowPlayingBar() {
   const {
@@ -65,9 +67,7 @@ export default function NowPlayingBar() {
       <div className="np-center">
         <div className="np-controls">
           <button type="button" className="btn-np-ctrl" onClick={prev} title="Previous">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
-            </svg>
+            <FaStepBackward style={{ fontSize: '13px' }} />
           </button>
 
           <button
@@ -78,20 +78,14 @@ export default function NowPlayingBar() {
             title={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-              </svg>
+              <FaPause style={{ fontSize: '14px' }} />
             ) : (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style={{ marginLeft: '2px' }}>
-                <path d="M8 5v14l11-7z" />
-              </svg>
+              <FaPlay style={{ fontSize: '14px', marginLeft: '2px' }} />
             )}
           </button>
 
           <button type="button" className="btn-np-ctrl" onClick={next} title="Next">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <path d="m6 18 8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-            </svg>
+            <FaStepForward style={{ fontSize: '13px' }} />
           </button>
         </div>
 
@@ -121,8 +115,9 @@ export default function NowPlayingBar() {
           onClick={() => setShowMobileVolume((prev) => !prev)}
           className="vol-btn-trigger"
           title="Volume"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          {volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
+          {volume === 0 ? <FiVolumeX /> : volume < 0.5 ? <FiVolume1 /> : <FiVolume2 />}
         </button>
 
         {/* Desktop inline & Mobile popup wrapper */}

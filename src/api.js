@@ -71,6 +71,17 @@ export const api = {
   getSongById: (id) => request(`/songs/${id}`),
   insertSong: (body) => request('/songs', { method: 'POST', body: JSON.stringify(body) }),
   createSong: (body) => request('/songs', { method: 'POST', body: JSON.stringify(body) }),
+  updateSong: async (id, body) => {
+    try {
+      return await request(`/songs/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+    } catch (_) {
+      try {
+        return await request('/songs', { method: 'PUT', body: JSON.stringify(body) })
+      } catch (__) {
+        return await request('/songs', { method: 'POST', body: JSON.stringify(body) })
+      }
+    }
+  },
   deleteSong: (id) => request(`/songs/${id}`, { method: 'DELETE' }),
 
   // Search

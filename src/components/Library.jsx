@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { api } from '../api'
 import CoverArt from './CoverArt'
 import { usePlayer } from './PlayerContext'
+import { FiPlus, FiCheck, FiSearch } from 'react-icons/fi'
+import { FaPlay, FaPause } from 'react-icons/fa'
+import { RiPlayList2Line } from 'react-icons/ri'
 
 function CustomDropdown({ label, options, value, onChange, placeholder = 'Select' }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -131,14 +134,14 @@ function CustomDropdown({ label, options, value, onChange, placeholder = 'Select
   )
 }
 
-export default function Library({ songs = [], onRefresh, onToast, onSelectSong, selectedSong }) {
+export default function Library({ songs = [], onRefresh, onToast, onSelectSong, selectedSong, userLibraryIds = [], onToggleUserLibrary, queuedSongIds = [], onToggleQueue }) {
   const { play, currentSong, isPlaying } = usePlayer()
 
   // State
   const [filterGenre, setFilterGenre] = useState('ALL')
+  const [filterLanguage, setFilterLanguage] = useState('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortOrder, setSortOrder] = useState('none')
-  const [queuedSongIds, setQueuedSongIds] = useState(new Set())
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false)
@@ -146,7 +149,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
   const [loading, setLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  // Local metadata storage map for persistent cover & duration
+  // Local metadata storage map for persistent cover, duration & language
   const [metaMap, setMetaMap] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('resonance_song_metadata_cache') || '{}')
@@ -163,6 +166,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       const meta = metaMap[id] || {}
       return {
         ...s,
+        language: s.language || s.lang || meta.language || 'English',
         coverUrl: s.coverUrl || s.cover_url || s.cover || s.imageUrl || meta.coverUrl || null,
         durationSeconds: s.durationSeconds || s.duration || s.duration_seconds || meta.durationSeconds || 180,
         audioUrl: s.audioUrl || s.audio_url || meta.audioUrl || null
@@ -171,8 +175,10 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
   }, [songs, metaMap])
 
   const genres = ['ALL', ...new Set(safeSongs.map((s) => s?.genre).filter(Boolean))]
+  const languages = ['ALL', ...new Set(safeSongs.map((s) => s?.language).filter(Boolean))]
 
   const genreOptions = genres.map((g) => ({ value: g, label: g }))
+  const languageOptions = languages.map((l) => ({ value: l, label: l }))
   const sortOptions = [
     { value: 'none', label: 'Default Order' },
     { value: 'asc', label: 'Title (A - Z)' },
@@ -181,7 +187,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     { value: 'duration-desc', label: 'Duration (Longest)' }
   ]
 
-  // Fetch initial queue state
+  // Fetch initial queue state from API & merge with local storage
   const refreshQueueState = async () => {
     try {
       const qData = await api.getQueue()
@@ -190,8 +196,13 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       else if (qData && Array.isArray(qData.songs)) qList = qData.songs
       else if (qData && Array.isArray(qData.queue)) qList = qData.queue
 
-      const ids = new Set(qList.map((s) => s.id || s.songId))
-      setQueuedSongIds(ids)
+      if (qList.length > 0) {
+        setQueuedSongIds((prev) => {
+          const merged = new Set([...Array.from(prev), ...qList.map((s) => String(s.id || s.songId))])
+          localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(merged)))
+          return merged
+        })
+      }
     } catch (_) {}
   }
 
@@ -207,13 +218,18 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       list = list.filter((s) => s?.genre === filterGenre)
     }
 
+    if (filterLanguage !== 'ALL') {
+      list = list.filter((s) => s?.language === filterLanguage)
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim()
       list = list.filter((s) =>
         (s?.title && s.title.toLowerCase().includes(q)) ||
         (s?.artist && s.artist.toLowerCase().includes(q)) ||
         (s?.album && s.album.toLowerCase().includes(q)) ||
-        (s?.genre && s.genre.toLowerCase().includes(q))
+        (s?.genre && s.genre.toLowerCase().includes(q)) ||
+        (s?.language && s.language.toLowerCase().includes(q))
       )
     }
 
@@ -232,7 +248,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     }
 
     return list
-  }, [safeSongs, filterGenre, searchQuery, sortOrder])
+  }, [safeSongs, filterGenre, filterLanguage, searchQuery, sortOrder])
 
   // Toggle Queue Action
   const handleToggleQueue = async (song, e) => {
@@ -240,28 +256,29 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       e.stopPropagation()
     }
 
-    const isCurrentlyQueued = queuedSongIds.has(song.id)
+    const songIdStr = String(song.id)
+    const isCurrentlyQueued = Array.from(queuedSongIds).some((id) => String(id) === songIdStr)
 
     if (isCurrentlyQueued) {
+      setQueuedSongIds((prev) => {
+        const next = new Set(Array.from(prev).filter((id) => String(id) !== songIdStr))
+        localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(next)))
+        return next
+      })
+      if (onToast) onToast(`"${song.title}" removed from Queue`, 'info')
       try {
         await api.dequeue(song.id)
-        setQueuedSongIds((prev) => {
-          const next = new Set(prev)
-          next.delete(song.id)
-          return next
-        })
-        if (onToast) onToast(`"${song.title}" removed from Queue`, 'ok')
-      } catch (err) {
-        if (onToast) onToast(err.message || 'Failed to remove from queue', 'err')
-      }
+      } catch (_) {}
     } else {
+      setQueuedSongIds((prev) => {
+        const next = new Set([...Array.from(prev), songIdStr])
+        localStorage.setItem('resonance_playback_queue', JSON.stringify(Array.from(next)))
+        return next
+      })
+      if (onToast) onToast(`"${song.title}" added to Queue!`, 'ok')
       try {
         await api.enqueue(song)
-        setQueuedSongIds((prev) => new Set(prev).add(song.id))
-        if (onToast) onToast(`"${song.title}" added to Queue!`, 'ok')
-      } catch (err) {
-        if (onToast) onToast(err.message || 'Failed to add to queue', 'err')
-      }
+      } catch (_) {}
     }
   }
 
@@ -314,6 +331,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
     artist: '',
     album: '',
     genre: '',
+    language: 'English',
     durationSeconds: '210',
     audioUrl: '',
     coverUrl: ''
@@ -327,6 +345,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       artist: '',
       album: '',
       genre: '',
+      language: 'English',
       durationSeconds: '210',
       audioUrl: '',
       coverUrl: ''
@@ -347,13 +366,15 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       const durSec = parseInt(formData.durationSeconds, 10) || 180
       const cUrl = formData.coverUrl.trim() || null
       const aUrl = formData.audioUrl.trim() || null
+      const songLang = formData.language.trim() || 'English'
 
       const updatedMeta = {
         ...metaMap,
         [String(songId)]: {
           coverUrl: cUrl,
           durationSeconds: durSec,
-          audioUrl: aUrl
+          audioUrl: aUrl,
+          language: songLang
         }
       }
       localStorage.setItem('resonance_song_metadata_cache', JSON.stringify(updatedMeta))
@@ -365,6 +386,8 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
         artist: formData.artist.trim(),
         album: formData.album.trim() || 'Single',
         genre: formData.genre.trim() || 'General',
+        language: songLang,
+        lang: songLang,
         duration: durSec,
         durationSeconds: durSec,
         duration_seconds: durSec,
@@ -399,7 +422,7 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
         </div>
 
         <button type="button" className="btn btn-primary" onClick={openModal}>
-          <span>+</span> Add Song
+          <FiPlus style={{ fontSize: '15px' }} /> Add Song
         </button>
       </div>
 
@@ -423,10 +446,12 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                   top: '50%',
                   transform: 'translateY(-50%)',
                   fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
                   opacity: 0.6
                 }}
               >
-                🔍
+                <FiSearch />
               </span>
             </div>
           </div>
@@ -438,6 +463,15 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                 options={genreOptions}
                 value={filterGenre}
                 onChange={setFilterGenre}
+              />
+            </div>
+
+            <div className="filter-box">
+              <CustomDropdown
+                label="FILTER LANGUAGE"
+                options={languageOptions}
+                value={filterLanguage}
+                onChange={setFilterLanguage}
               />
             </div>
 
@@ -459,7 +493,8 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
       <div className="spotify-cards-grid">
         {displayedSongs.map((song) => {
           const isCurrent = currentSong?.id === song.id
-          const isQueued = queuedSongIds.has(song.id)
+          const isQueued = (queuedSongIds || []).some((id) => String(id) === String(song.id))
+          const isSaved = Array.isArray(userLibraryIds) && userLibraryIds.some((id) => String(id) === String(song.id))
 
           return (
             <div
@@ -485,28 +520,34 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                   }}
                   title={isCurrent && isPlaying ? 'Pause' : 'Play'}
                 >
-                  <span style={{ fontSize: isCurrent && isPlaying ? '14px' : '15px', marginLeft: isCurrent && isPlaying ? '0' : '2px' }}>
-                    {isCurrent && isPlaying ? '❚❚' : '▶'}
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {isCurrent && isPlaying ? <FaPause style={{ fontSize: '13px' }} /> : <FaPlay style={{ fontSize: '13px', marginLeft: '2px' }} />}
                   </span>
                 </button>
 
-                {/* Card Quick Action Corner Icons (Queue & Delete) */}
+                {/* Card Quick Action Corner Icons (Queue & Add to Your Library) */}
                 <div className="spotify-card-overlay-actions">
                   <button
                     type="button"
                     className={`card-icon-action ${isQueued ? 'queued' : ''}`}
-                    onClick={(e) => handleToggleQueue(song, e)}
-                    title={isQueued ? 'In Queue' : 'Add to Queue'}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onToggleQueue) onToggleQueue(song)
+                    }}
+                    title={isQueued ? 'In Queue (Click to remove)' : 'Add to Queue'}
                   >
-                    📑
+                    <RiPlayList2Line style={{ fontSize: '12px' }} />
                   </button>
                   <button
                     type="button"
-                    className="card-icon-action delete"
-                    onClick={(e) => requestDelete(song, e)}
-                    title="Delete Track"
+                    className={`card-icon-action ${isSaved ? 'in-library' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onToggleUserLibrary) onToggleUserLibrary(song)
+                    }}
+                    title={isSaved ? 'Remove from Your Library' : 'Add to Your Library'}
                   >
-                    🗑️
+                    {isSaved ? <FiCheck style={{ fontSize: '13px' }} /> : <FiPlus style={{ fontSize: '13px' }} />}
                   </button>
                 </div>
               </div>
@@ -653,14 +694,16 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%',
-              maxWidth: '440px', /* Small and Compact */
+              maxWidth: '500px',
+              boxSizing: 'border-box',
               background: 'linear-gradient(145deg, #190e30, #110822)',
               border: '1px solid rgba(168, 85, 247, 0.45)',
               borderRadius: '16px',
               padding: '24px',
               boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(168, 85, 247, 0.25)',
               animation: 'rise 0.22s ease-out',
-              position: 'relative'
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
             {/* Modal Header */}
@@ -687,100 +730,113 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
               </button>
             </div>
 
-            {/* Compact Form */}
+            {/* Balanced Compact Form */}
             <form onSubmit={handleAddSong} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
                 <div className="field" style={{ margin: 0 }}>
-                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Song ID *</label>
+                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Song ID *</label>
                   <input
                     type="number"
                     required
                     min="1"
                     value={formData.id}
                     onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                    style={{ padding: '8px 10px', fontSize: '13px' }}
+                    style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div className="field" style={{ margin: 0 }}>
-                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Title *</label>
+                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Title *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Sanda Numba Awidin"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    style={{ padding: '8px 10px', fontSize: '13px' }}
+                    style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="field" style={{ margin: 0 }}>
-                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Artist *</label>
+                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Artist *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Uvindu Ayshcharya"
                     value={formData.artist}
                     onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
-                    style={{ padding: '8px 10px', fontSize: '13px' }}
+                    style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div className="field" style={{ margin: 0 }}>
-                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Album</label>
+                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Album</label>
                   <input
                     type="text"
                     placeholder="e.g. Single"
                     value={formData.album}
                     onChange={(e) => setFormData({ ...formData, album: e.target.value })}
-                    style={{ padding: '8px 10px', fontSize: '13px' }}
+                    style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="field" style={{ margin: 0 }}>
-                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Genre</label>
+                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Genre</label>
                   <input
                     type="text"
                     placeholder="e.g. Pop"
                     value={formData.genre}
                     onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
-                    style={{ padding: '8px 10px', fontSize: '13px' }}
+                    style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div className="field" style={{ margin: 0 }}>
-                  <label style={{ fontSize: '11px', marginBottom: '4px' }}>Duration (Seconds)</label>
+                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Language</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sinhala"
+                    value={formData.language}
+                    onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+                    style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Duration (Seconds)</label>
                   <input
                     type="number"
                     min="1"
                     placeholder="e.g. 210"
                     value={formData.durationSeconds}
                     onChange={(e) => setFormData({ ...formData, durationSeconds: e.target.value })}
-                    style={{ padding: '8px 10px', fontSize: '13px' }}
+                    style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
               <div className="field" style={{ margin: 0 }}>
-                <label style={{ fontSize: '11px', marginBottom: '4px' }}>Audio (.mp3) URL</label>
+                <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Audio (.mp3) URL</label>
                 <input
                   type="text"
                   placeholder="/audio/1.mp3 or https://..."
                   value={formData.audioUrl}
                   onChange={(e) => setFormData({ ...formData, audioUrl: e.target.value })}
-                  style={{ padding: '8px 10px', fontSize: '13px' }}
+                  style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div className="field" style={{ margin: 0 }}>
-                <label style={{ fontSize: '11px', marginBottom: '4px' }}>Cover Image URL</label>
+                <label style={{ fontSize: '11px', marginBottom: '4px', display: 'block' }}>Cover Image URL</label>
                 <input
                   type="text"
                   placeholder="/image/1.jpeg or https://..."
                   value={formData.coverUrl}
                   onChange={(e) => setFormData({ ...formData, coverUrl: e.target.value })}
-                  style={{ padding: '8px 10px', fontSize: '13px' }}
+                  style={{ padding: '8px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -806,10 +862,10 @@ export default function Library({ songs = [], onRefresh, onToast, onSelectSong, 
                 <button
                   type="submit"
                   disabled={loading}
+                  className="btn-modal-submit"
                   style={{
                     padding: '10px',
                     borderRadius: '8px',
-                    border: 'none',
                     background: 'linear-gradient(135deg, var(--accent-2), var(--accent-dim))',
                     color: '#ffffff',
                     fontSize: '13px',
